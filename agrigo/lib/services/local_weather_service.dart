@@ -58,7 +58,14 @@ class LocalWeatherService {
         '$_baseUrl?latitude=$lat&longitude=$lon&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,pressure_msl&timezone=Asia%2FJakarta',
       );
 
-      final response = await http.get(url);
+      final response = await http
+          .get(url)
+          .timeout(
+            Duration(seconds: 10),
+            onTimeout: () {
+              throw Exception('Request timeout');
+            },
+          );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -75,7 +82,12 @@ class LocalWeatherService {
   static Future<Map<String, dynamic>> getWeatherByCity(String cityName) async {
     try {
       // Get coordinates from city name
-      List<Location> locations = await locationFromAddress(cityName);
+      List<Location> locations = await locationFromAddress(cityName).timeout(
+        Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('Geocoding timeout');
+        },
+      );
       if (locations.isNotEmpty) {
         Location location = locations.first;
         return await getWeatherByCoordinates(
@@ -100,7 +112,14 @@ class LocalWeatherService {
         '$_baseUrl?latitude=$lat&longitude=$lon&hourly=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=Asia%2FJakarta&forecast_days=2',
       );
 
-      final response = await http.get(url);
+      final response = await http
+          .get(url)
+          .timeout(
+            Duration(seconds: 10),
+            onTimeout: () {
+              throw Exception('Request timeout');
+            },
+          );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);

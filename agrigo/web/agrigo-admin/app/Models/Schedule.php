@@ -14,7 +14,6 @@ class Schedule extends Model
     protected $fillable = [
         'user_id',
         'commodity_id',
-        'komoditas',
         'start_date',
         'end_date',
         'status',
@@ -36,6 +35,11 @@ class Schedule extends Model
         return $this->belongsTo(Commodity::class);
     }
 
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
@@ -44,6 +48,11 @@ class Schedule extends Model
     public function scopeCompleted($query)
     {
         return $query->where('status', 'completed');
+    }
+
+    public function scopeCancelled($query)
+    {
+        return $query->where('status', 'cancelled');
     }
 
     public function getDurationAttribute()

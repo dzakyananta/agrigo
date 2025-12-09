@@ -84,14 +84,14 @@
 
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">Condition <span class="text-danger">*</span></label>
-                                <select name="weather_condition" class="form-select @error('weather_condition') is-invalid @enderror" required>
+                                <select name="condition" class="form-select @error('condition') is-invalid @enderror" required>
                                     <option value="">Select</option>
-                                    <option value="Cerah" {{ old('weather_condition') == 'Cerah' ? 'selected' : '' }}>Cerah</option>
-                                    <option value="Berawan" {{ old('weather_condition') == 'Berawan' ? 'selected' : '' }}>Berawan</option>
-                                    <option value="Hujan" {{ old('weather_condition') == 'Hujan' ? 'selected' : '' }}>Hujan</option>
-                                    <option value="Mendung" {{ old('weather_condition') == 'Mendung' ? 'selected' : '' }}>Mendung</option>
+                                    <option value="Cerah" {{ old('condition') == 'Cerah' ? 'selected' : '' }}>Cerah</option>
+                                    <option value="Berawan" {{ old('condition') == 'Berawan' ? 'selected' : '' }}>Berawan</option>
+                                    <option value="Hujan" {{ old('condition') == 'Hujan' ? 'selected' : '' }}>Hujan</option>
+                                    <option value="Mendung" {{ old('condition') == 'Mendung' ? 'selected' : '' }}>Mendung</option>
                                 </select>
-                                @error('weather_condition')
+                                @error('condition')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>

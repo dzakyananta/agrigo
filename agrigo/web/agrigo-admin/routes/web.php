@@ -9,6 +9,11 @@ use App\Http\Controllers\Admin\CommodityController;
 use App\Http\Controllers\Admin\ScheduleController;
 use App\Http\Controllers\Admin\WeatherController;
 use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\ChatbotFaqController;
+use App\Http\Controllers\ArticleController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\AppSettingController;
+use App\Http\Controllers\ActivityLogController;
 
 Route::get('/', function () {
     return redirect('/admin/login');
@@ -37,8 +42,10 @@ Route::prefix('admin')->group(function () {
         // Transaction Management
         Route::prefix('transactions')->group(function () {
             Route::get('/', [TransactionController::class, 'index'])->name('admin.transactions.index');
-            Route::get('/{id}', [TransactionController::class, 'show'])->name('admin.transactions.show');
-            Route::put('/{id}/status', [TransactionController::class, 'updateStatus'])->name('admin.transactions.update-status');
+            Route::get('/create', [TransactionController::class, 'create'])->name('admin.transactions.create');
+            Route::post('/', [TransactionController::class, 'store'])->name('admin.transactions.store');
+            Route::get('/{id}/edit', [TransactionController::class, 'edit'])->name('admin.transactions.edit');
+            Route::put('/{id}', [TransactionController::class, 'update'])->name('admin.transactions.update');
             Route::delete('/{id}', [TransactionController::class, 'destroy'])->name('admin.transactions.destroy');
         });
         
@@ -76,5 +83,59 @@ Route::prefix('admin')->group(function () {
         
         // Reports & Analytics
         Route::get('/reports', [ReportController::class, 'index'])->name('admin.reports.index');
+        
+        // Article Management
+        Route::prefix('articles')->group(function () {
+            Route::get('/', [ArticleController::class, 'index'])->name('articles.index');
+            Route::get('/create', [ArticleController::class, 'create'])->name('articles.create');
+            Route::post('/', [ArticleController::class, 'store'])->name('articles.store');
+            Route::get('/{article}', [ArticleController::class, 'show'])->name('articles.show');
+            Route::get('/{article}/edit', [ArticleController::class, 'edit'])->name('articles.edit');
+            Route::put('/{article}', [ArticleController::class, 'update'])->name('articles.update');
+            Route::delete('/{article}', [ArticleController::class, 'destroy'])->name('articles.destroy');
+            Route::post('/{article}/toggle-publish', [ArticleController::class, 'togglePublish'])->name('articles.toggle-publish');
+        });
+        
+        // Notification Management
+        Route::prefix('notifications')->group(function () {
+            Route::get('/', [NotificationController::class, 'index'])->name('notifications.index');
+            Route::get('/create', [NotificationController::class, 'create'])->name('notifications.create');
+            Route::post('/', [NotificationController::class, 'store'])->name('notifications.store');
+            Route::get('/{notification}', [NotificationController::class, 'show'])->name('notifications.show');
+            Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
+            Route::post('/broadcast', [NotificationController::class, 'sendBroadcast'])->name('notifications.broadcast');
+        });
+        
+        // Chatbot FAQ Management
+        Route::prefix('chatbot-faqs')->group(function () {
+            Route::get('/', [ChatbotFaqController::class, 'index'])->name('admin.chatbot-faqs.index');
+            Route::get('/create', [ChatbotFaqController::class, 'create'])->name('admin.chatbot-faqs.create');
+            Route::post('/', [ChatbotFaqController::class, 'store'])->name('admin.chatbot-faqs.store');
+            Route::get('/{chatbotFaq}', [ChatbotFaqController::class, 'show'])->name('admin.chatbot-faqs.show');
+            Route::get('/{chatbotFaq}/edit', [ChatbotFaqController::class, 'edit'])->name('admin.chatbot-faqs.edit');
+            Route::put('/{chatbotFaq}', [ChatbotFaqController::class, 'update'])->name('admin.chatbot-faqs.update');
+            Route::delete('/{chatbotFaq}', [ChatbotFaqController::class, 'destroy'])->name('admin.chatbot-faqs.destroy');
+            Route::post('/{chatbotFaq}/toggle-status', [ChatbotFaqController::class, 'toggleStatus'])->name('admin.chatbot-faqs.toggle-status');
+            Route::post('/{chatbotFaq}/reset-usage', [ChatbotFaqController::class, 'resetUsage'])->name('admin.chatbot-faqs.reset-usage');
+        });
+        
+        // App Settings
+        Route::prefix('settings')->group(function () {
+            Route::get('/', [AppSettingController::class, 'index'])->name('settings.index');
+            Route::get('/create', [AppSettingController::class, 'create'])->name('settings.create');
+            Route::post('/', [AppSettingController::class, 'store'])->name('settings.store');
+            Route::get('/{setting}/edit', [AppSettingController::class, 'edit'])->name('settings.edit');
+            Route::put('/{setting}', [AppSettingController::class, 'update'])->name('settings.update');
+            Route::delete('/{setting}', [AppSettingController::class, 'destroy'])->name('settings.destroy');
+            Route::post('/bulk-update', [AppSettingController::class, 'bulkUpdate'])->name('settings.bulk-update');
+        });
+        
+        // Activity Logs
+        Route::prefix('activity-logs')->group(function () {
+            Route::get('/', [ActivityLogController::class, 'index'])->name('activity-logs.index');
+            Route::get('/{activityLog}', [ActivityLogController::class, 'show'])->name('activity-logs.show');
+            Route::delete('/{activityLog}', [ActivityLogController::class, 'destroy'])->name('activity-logs.destroy');
+            Route::post('/clear-old', [ActivityLogController::class, 'clearOld'])->name('activity-logs.clear-old');
+        });
     });
 });

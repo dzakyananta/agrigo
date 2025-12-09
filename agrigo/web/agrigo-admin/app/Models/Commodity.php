@@ -12,27 +12,22 @@ class Commodity extends Model
 
     protected $fillable = [
         'name',
-        'category',
+        'type',
         'description',
-        'unit',
-        'current_price',
-        'min_price',
-        'max_price',
-        'harvest_season',
-        'storage_requirements',
-        'quality_standards',
         'is_active'
     ];
 
     protected $casts = [
-        'current_price' => 'decimal:2',
-        'min_price' => 'decimal:2',
-        'max_price' => 'decimal:2',
         'is_active' => 'boolean'
     ];
 
     public function transactions()
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    public function schedules()
+    {
+        return $this->hasMany(Schedule::class);
     }
 }

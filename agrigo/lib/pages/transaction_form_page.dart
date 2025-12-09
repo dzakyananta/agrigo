@@ -16,6 +16,8 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
   // Form controllers
   final _tanggalController = TextEditingController();
   final _targetController = TextEditingController();
+  final _jumlahDanaController =
+      TextEditingController(); // NEW - untuk modal non-penjualan
   final _sumberPengeluaranController = TextEditingController();
   final _itemPengeluaranController = TextEditingController();
   final _kuantitasController = TextEditingController();
@@ -27,6 +29,7 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
   // Dropdown values
   String? selectedKomoditas;
   String? selectedTarget;
+  String? selectedSumberPemasukan; // NEW
   String? selectedSumberPengeluaran;
   String? selectedItemPengeluaran;
   String? selectedSatuan;
@@ -97,6 +100,19 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
     'Penjualan Alat Pertanian',
   ];
 
+  // Sumber Pemasukan options (NEW)
+  final List<String> sumberPemasukanOptions = [
+    'Penjualan Hasil Panen',
+    'Bantuan Pemerintah',
+    'Pinjaman Bank',
+    'Pinjaman Koperasi',
+    'Pinjaman Lembaga Keuangan',
+    'Investor/Partner',
+    'Hibah/Donasi',
+    'Modal Pribadi',
+    'Lainnya',
+  ];
+
   // Source options for expense
   final List<String> sumberPengeluaranOptions = [
     'Pembelian Bibit',
@@ -138,6 +154,7 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
   void dispose() {
     _tanggalController.dispose();
     _targetController.dispose();
+    _jumlahDanaController.dispose();
     _sumberPengeluaranController.dispose();
     _itemPengeluaranController.dispose();
     _kuantitasController.dispose();
@@ -195,6 +212,58 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
 
               // Target (for income) / Sumber Pengeluaran (for expense)
               if (isIncome) ...[
+                _buildSectionTitle('Sumber Pemasukan', isRequired: true),
+                _buildDropdownField(
+                  value: selectedSumberPemasukan,
+                  items: sumberPemasukanOptions,
+                  hint: 'Pilih Sumber Pemasukan',
+                  onChanged: (value) {
+                    setState(() {
+                      selectedSumberPemasukan = value;
+                      // Clear jumlah dana jika pilih Penjualan Hasil Panen
+                      if (value == 'Penjualan Hasil Panen') {
+                        _jumlahDanaController.clear();
+                      }
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Jumlah Dana (hanya muncul jika bukan Penjualan Hasil Panen)
+                if (selectedSumberPemasukan != null &&
+                    selectedSumberPemasukan != 'Penjualan Hasil Panen') ...[
+                  _buildSectionTitle('Jumlah Dana', isRequired: true),
+                  Row(
+                    children: [
+                      const Text(
+                        'Rp ',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildTextField(
+                          controller: _jumlahDanaController,
+                          hint: 'Masukkan jumlah dana',
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Masukkan total dana yang diterima dari ${selectedSumberPemasukan?.toLowerCase()}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 _buildSectionTitle('Target', isRequired: true),
                 _buildTextField(
                   controller: _targetController,
@@ -239,95 +308,101 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
                 _buildTextField(hint: 'Masukkan Nama Agen/Pembeli'),
                 const SizedBox(height: 16),
               ],
-              const SizedBox(height: 16),
 
-              // Kuantitas
-              _buildSectionTitle('Kuantitas', isRequired: true),
-              Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: _buildTextField(
-                      controller: _kuantitasController,
-                      hint: '0',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: _buildDropdownField(
-                      value: selectedSatuan,
-                      items: satuanOptions,
-                      hint: 'Satuan',
-                      onChanged: (value) {
-                        setState(() {
-                          selectedSatuan = value;
-                        });
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+              // Kuantitas, Harga, Total - hanya untuk Penjualan Hasil Panen atau Expense
+              if (!isIncome ||
+                  (isIncome &&
+                      selectedSumberPemasukan == 'Penjualan Hasil Panen')) ...[
+                const SizedBox(height: 16),
 
-              // Harga Per Unit/Beli
-              _buildSectionTitle(
-                isIncome ? 'Harga Satuan' : 'Harga Per Unit/Beli',
-                isRequired: true,
-              ),
-              Row(
-                children: [
-                  const Text(
-                    'Rp ',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w500,
+                // Kuantitas
+                _buildSectionTitle('Kuantitas', isRequired: true),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: _buildTextField(
+                        controller: _kuantitasController,
+                        hint: '0',
+                        keyboardType: TextInputType.number,
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: _buildTextField(
-                      controller: _hargaController,
-                      hint: 'Masukkan harga',
-                      keyboardType: TextInputType.number,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: _buildDropdownField(
+                        value: selectedSatuan,
+                        items: satuanOptions,
+                        hint: 'Satuan',
+                        onChanged: (value) {
+                          setState(() {
+                            selectedSatuan = value;
+                          });
+                        },
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '/ ${selectedSatuan ?? 'Satuan'}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+                  ],
+                ),
+                const SizedBox(height: 16),
 
-              // Total Harga
-              _buildSectionTitle('Total Harga', isRequired: true),
-              Row(
-                children: [
-                  const Text(
-                    'Rp ',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w500,
+                // Harga Per Unit/Beli
+                _buildSectionTitle(
+                  isIncome ? 'Harga Satuan' : 'Harga Per Unit/Beli',
+                  isRequired: true,
+                ),
+                Row(
+                  children: [
+                    const Text(
+                      'Rp ',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child: _buildTextField(
-                      controller: _totalHargaController,
-                      hint: 'Masukkan total harga',
-                      keyboardType: TextInputType.number,
+                    Expanded(
+                      flex: 2,
+                      child: _buildTextField(
+                        controller: _hargaController,
+                        hint: 'Masukkan harga',
+                        keyboardType: TextInputType.number,
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '/ ${selectedSatuan ?? 'Satuan'}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Total Harga
+                _buildSectionTitle('Total Harga', isRequired: true),
+                Row(
+                  children: [
+                    const Text(
+                      'Rp ',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Expanded(
+                      child: _buildTextField(
+                        controller: _totalHargaController,
+                        hint: 'Masukkan total harga',
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                  ],
+                ),
+              ], // End of conditional block
               const SizedBox(height: 16),
 
               // Upload section
@@ -598,6 +673,20 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
       return false;
     }
 
+    if (widget.type == 'income' && selectedSumberPemasukan == null) {
+      _showSnackBar('Silakan pilih sumber pemasukan', Colors.red);
+      return false;
+    }
+
+    // Validasi jumlah dana untuk sumber non-penjualan
+    if (widget.type == 'income' &&
+        selectedSumberPemasukan != null &&
+        selectedSumberPemasukan != 'Penjualan Hasil Panen' &&
+        _jumlahDanaController.text.isEmpty) {
+      _showSnackBar('Silakan masukkan jumlah dana', Colors.red);
+      return false;
+    }
+
     if (widget.type == 'income' && _targetController.text.isEmpty) {
       _showSnackBar('Silakan masukkan target pemasukan', Colors.red);
       return false;
@@ -613,17 +702,25 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
       return false;
     }
 
-    if (_kuantitasController.text.isEmpty) {
+    // Validasi kuantitas, satuan, harga - hanya untuk penjualan hasil panen atau expense
+    final isPenjualanHasilPanen =
+        widget.type == 'income' &&
+        selectedSumberPemasukan == 'Penjualan Hasil Panen';
+
+    if ((isPenjualanHasilPanen || widget.type == 'expense') &&
+        _kuantitasController.text.isEmpty) {
       _showSnackBar('Silakan masukkan kuantitas', Colors.red);
       return false;
     }
 
-    if (selectedSatuan == null) {
+    if ((isPenjualanHasilPanen || widget.type == 'expense') &&
+        selectedSatuan == null) {
       _showSnackBar('Silakan pilih satuan', Colors.red);
       return false;
     }
 
-    if (_hargaController.text.isEmpty) {
+    if ((isPenjualanHasilPanen || widget.type == 'expense') &&
+        _hargaController.text.isEmpty) {
       _showSnackBar('Silakan masukkan harga satuan', Colors.red);
       return false;
     }
@@ -676,23 +773,45 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildDetailRow('Komoditas', selectedKomoditas ?? ''),
+                    if (widget.type == 'income')
+                      _buildDetailRow('Sumber', selectedSumberPemasukan ?? ''),
+                    if (widget.type == 'expense')
+                      _buildDetailRow(
+                        'Sumber',
+                        selectedSumberPengeluaran ?? '',
+                      ),
                     _buildDetailRow('Tanggal', _tanggalController.text),
                     _buildDetailRow(
-                      isIncome ? 'Target' : 'Sumber',
+                      isIncome ? 'Target' : 'Item',
                       isIncome
                           ? _targetController.text
-                          : (selectedSumberPengeluaran ?? ''),
+                          : _itemPengeluaranController.text,
                     ),
-                    _buildDetailRow(
-                      'Kuantitas',
-                      '${_kuantitasController.text} ${selectedSatuan ?? ''}',
-                    ),
-                    _buildDetailRow('Harga', 'Rp ${_hargaController.text}/Kg'),
-                    _buildDetailRow(
-                      'Total',
-                      'Rp ${_totalHargaController.text}',
-                      isTotal: true,
-                    ),
+                    // Tampilkan Jumlah Dana jika bukan penjualan hasil panen
+                    if (isIncome &&
+                        selectedSumberPemasukan != null &&
+                        selectedSumberPemasukan != 'Penjualan Hasil Panen' &&
+                        _jumlahDanaController.text.isNotEmpty) ...[
+                      _buildDetailRow(
+                        'Jumlah Dana',
+                        'Rp ${_jumlahDanaController.text}',
+                        isTotal: true,
+                      ),
+                    ] else ...[
+                      _buildDetailRow(
+                        'Kuantitas',
+                        '${_kuantitasController.text} ${selectedSatuan ?? ''}',
+                      ),
+                      _buildDetailRow(
+                        'Harga',
+                        'Rp ${_hargaController.text}/${selectedSatuan ?? 'Satuan'}',
+                      ),
+                      _buildDetailRow(
+                        'Total',
+                        'Rp ${_totalHargaController.text}',
+                        isTotal: true,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -766,7 +885,17 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
       return;
     }
 
-    if (_totalHargaController.text.isEmpty) {
+    // Validasi total harga HANYA untuk penjualan hasil panen atau expense
+    final isPenjualanHasilPanen =
+        widget.type == 'income' &&
+        selectedSumberPemasukan == 'Penjualan Hasil Panen';
+    final isNonPenjualan =
+        widget.type == 'income' &&
+        selectedSumberPemasukan != null &&
+        selectedSumberPemasukan != 'Penjualan Hasil Panen';
+
+    if ((isPenjualanHasilPanen || widget.type == 'expense') &&
+        _totalHargaController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Silakan isi total harga'),
@@ -776,29 +905,86 @@ class _TransactionFormPageState extends State<TransactionFormPage> {
       return;
     }
 
+    // Validasi jumlah dana untuk sumber non-penjualan
+    if (isNonPenjualan && _jumlahDanaController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Silakan isi jumlah dana'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     // Create transaction data with proper data types
+    // Untuk income: gunakan jumlah dana jika ada (dari pinjaman/bantuan), jika tidak ada gunakan total harga
+    double amount;
+    String description;
+
+    if (widget.type == 'income' &&
+        selectedSumberPemasukan != null &&
+        selectedSumberPemasukan != 'Penjualan Hasil Panen' &&
+        _jumlahDanaController.text.isNotEmpty) {
+      // Gunakan jumlah dana dari input untuk sumber non-penjualan
+      amount =
+          double.tryParse(
+            _jumlahDanaController.text.replaceAll(',', '').replaceAll('.', ''),
+          ) ??
+          0;
+      description =
+          'Sumber: ${selectedSumberPemasukan ?? ''} | Target: ${_targetController.text} | Komoditas: $selectedKomoditas | Dana: Rp ${_jumlahDanaController.text}';
+      if (_catatanController.text.isNotEmpty) {
+        description += ' | Catatan: ${_catatanController.text}';
+      }
+    } else if (widget.type == 'income') {
+      // Gunakan total harga untuk penjualan hasil panen
+      amount =
+          double.tryParse(
+            _totalHargaController.text.replaceAll(',', '').replaceAll('.', ''),
+          ) ??
+          0;
+      description =
+          'Target: ${_targetController.text} | Komoditas: $selectedKomoditas | ${_kuantitasController.text} ${selectedSatuan ?? ''} @ Rp ${_hargaController.text}';
+      if (_catatanController.text.isNotEmpty) {
+        description += ' | Catatan: ${_catatanController.text}';
+      }
+    } else {
+      // Untuk expense
+      amount =
+          double.tryParse(
+            _totalHargaController.text.replaceAll(',', '').replaceAll('.', ''),
+          ) ??
+          0;
+      description =
+          'Item: ${_itemPengeluaranController.text} | Komoditas: $selectedKomoditas | ${_kuantitasController.text} ${selectedSatuan ?? ''} @ Rp ${_hargaController.text}';
+      if (_sumberPengeluaranController.text.isNotEmpty) {
+        description += ' | Vendor: ${_sumberPengeluaranController.text}';
+      }
+      if (_deskripsiController.text.isNotEmpty) {
+        description += ' | ${_deskripsiController.text}';
+      }
+    }
+
+    // Validasi amount tidak boleh 0
+    if (amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Jumlah harus lebih dari 0'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final transactionData = {
       'type': widget.type,
-      'komoditas': selectedKomoditas,
-      'tanggal': _tanggalController.text,
-      'target': widget.type == 'income'
-          ? _targetController.text
+      'source': widget.type == 'income'
+          ? selectedSumberPemasukan
           : selectedSumberPengeluaran,
-      'itemPengeluaran': widget.type == 'expense'
-          ? _itemPengeluaranController.text
-          : null,
-      'namaVendor': widget.type == 'expense'
-          ? _sumberPengeluaranController.text
-          : null,
-      'kuantitas': _kuantitasController.text,
-      'satuan': selectedSatuan,
-      'harga': _hargaController.text,
-      'totalHarga': _totalHargaController.text.trim(), // Ensure no whitespace
-      'catatan': widget.type == 'income'
-          ? _catatanController.text
-          : _deskripsiController.text,
-      'uploadedFiles': uploadedFiles,
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
+      'amount': amount,
+      'description': description,
+      'date': DateFormat('yyyy-MM-dd').format(selectedDate ?? DateTime.now()),
+      'commodity_name': selectedKomoditas,
     };
 
     // Return the data to the previous screen

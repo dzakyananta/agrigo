@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/schedule_service.dart';
 import 'edit_schedule_page.dart';
-import 'half_screen_edit_schedule.dart';
 
 class SchedulePage extends StatefulWidget {
   const SchedulePage({super.key});
@@ -102,19 +101,6 @@ class _SchedulePageState extends State<SchedulePage> {
     }
   }
 
-  Future<void> _showHalfScreenEdit(Schedule schedule) async {
-    final result = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => HalfScreenEditSchedule(schedule: schedule),
-    );
-
-    if (result == true) {
-      _loadSchedules(); // Refresh the list after successful edit
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -196,8 +182,6 @@ class _SchedulePageState extends State<SchedulePage> {
   }
 
   Widget _buildScheduleCard(Schedule schedule) {
-    final now = DateTime.now();
-
     // Get commodity icon
     IconData commodityIcon = _getCommodityIcon(schedule.komoditas);
     Color commodityColor = _getCommodityColor(schedule.komoditas);
@@ -361,7 +345,7 @@ class _SchedulePageState extends State<SchedulePage> {
                 // Edit button - kiri
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => _showHalfScreenEdit(schedule),
+                    onTap: () => _editSchedule(schedule),
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(

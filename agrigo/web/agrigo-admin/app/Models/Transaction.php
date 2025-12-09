@@ -14,18 +14,15 @@ class Transaction extends Model
         'user_id',
         'commodity_id',
         'type',
-        'category',
+        'source',
         'amount',
-        'quantity',
-        'price_per_unit',
-        'status',
         'description',
-        'transaction_date',
+        'date',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
-        'transaction_date' => 'date',
+        'date' => 'date',
     ];
 
     public function user(): BelongsTo
@@ -48,8 +45,14 @@ class Transaction extends Model
         return $query->where('type', 'expense');
     }
 
+    public function scopeByMonth($query, $month, $year)
+    {
+        return $query->whereYear('date', $year)
+                     ->whereMonth('date', $month);
+    }
+
     public function scopeByDateRange($query, $startDate, $endDate)
     {
-        return $query->whereBetween('transaction_date', [$startDate, $endDate]);
+        return $query->whereBetween('date', [$startDate, $endDate]);
     }
 }

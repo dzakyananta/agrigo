@@ -46,7 +46,7 @@
                                 <td>{{ $weather->date ? \Carbon\Carbon::parse($weather->date)->format('d/m/Y') : '-' }}</td>
                                 <td><strong>{{ $weather->location }}</strong></td>
                                 <td>
-                                    <span class="badge bg-primary">{{ $weather->weather_condition }}</span>
+                                    <span class="badge bg-primary">{{ $weather->condition }}</span>
                                 </td>
                                 <td>{{ $weather->temperature }}°C</td>
                                 <td>{{ $weather->humidity }}%</td>

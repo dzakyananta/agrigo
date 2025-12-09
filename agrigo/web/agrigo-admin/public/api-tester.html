@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Agrigo API Tester</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            body {
+                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                padding: 20px;
+            }
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                background: white;
+                border-radius: 15px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+                padding: 30px;
+            }
+            h1 {
+                color: #333;
+                margin-bottom: 10px;
+                text-align: center;
+            }
+            .subtitle {
+                text-align: center;
+                color: #666;
+                margin-bottom: 30px;
+            }
+            .section {
+                margin-bottom: 25px;
+                padding: 20px;
+                background: #f8f9fa;
+                border-radius: 8px;
+                border-left: 4px solid #667eea;
+            }
+            .section h2 {
+                color: #667eea;
+                margin-bottom: 15px;
+                font-size: 18px;
+            }
+            .form-group {
+                margin-bottom: 15px;
+            }
+            label {
+                display: block;
+                margin-bottom: 5px;
+                color: #555;
+                font-weight: 500;
+            }
+            input,
+            select,
+            textarea {
+                width: 100%;
+                padding: 10px;
+                border: 2px solid #ddd;
+                border-radius: 5px;
+                font-size: 14px;
+                transition: border-color 0.3s;
+            }
+            input:focus,
+            select:focus,
+            textarea:focus {
+                outline: none;
+                border-color: #667eea;
+            }
+            button {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                padding: 12px 25px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                transition: transform 0.2s;
+            }
+            button:hover {
+                transform: translateY(-2px);
+            }
+            button:active {
+                transform: translateY(0);
+            }
+            .response {
+                margin-top: 15px;
+                padding: 15px;
+                background: #fff;
+                border-radius: 5px;
+                border: 1px solid #ddd;
+                max-height: 300px;
+                overflow-y: auto;
+            }
+            .response pre {
+                margin: 0;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                font-family: "Courier New", monospace;
+                font-size: 12px;
+            }
+            .success {
+                color: #28a745;
+                font-weight: bold;
+            }
+            .error {
+                color: #dc3545;
+                font-weight: bold;
+            }
+            .info {
+                background: #e3f2fd;
+                padding: 15px;
+                border-radius: 5px;
+                margin-bottom: 20px;
+                border-left: 4px solid #2196f3;
+            }
+            .info h3 {
+                color: #1976d2;
+                margin-bottom: 10px;
+            }
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🌾 Agrigo API Tester</h1>
+            <p class="subtitle">Test integrasi Mobile App ↔ Web Admin</p>
+
+            <div class="info">
+                <h3>ℹ️ Info</h3>
+                <p><strong>Server:</strong> http://127.0.0.1:8000/api</p>
+                <p>
+                    <strong>Status:</strong>
+                    <span id="serverStatus">Checking...</span>
+                </p>
+                <p>
+                    <strong>Token:</strong>
+                    <span id="tokenDisplay">Not logged in</span>
+                </p>
+            </div>
+
+            <div class="grid">
+                <!-- LOGIN SECTION -->
+                <div class="section">
+                    <h2>🔐 Login</h2>
+                    <div class="form-group">
+                        <label>Email:</label>
+                        <input
+                            type="email"
+                            id="loginEmail"
+                            value="budi@example.com"
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label>Password:</label>
+                        <input
+                            type="password"
+                            id="loginPassword"
+                            value="password123"
+                        />
+                    </div>
+                    <button onclick="testLogin()">Login</button>
+                    <div class="response" id="loginResponse"></div>
+                </div>
+
+                <!-- GET COMMODITIES -->
+                <div class="section">
+                    <h2>🌾 Get Commodities</h2>
+                    <p style="color: #666; margin-bottom: 15px">
+                        Mengambil semua komoditas (36 items)
+                    </p>
+                    <button onclick="testGetCommodities()">
+                        Get All Commodities
+                    </button>
+                    <div class="response" id="commoditiesResponse"></div>
+                </div>
+
+                <!-- GET FINANCIAL SUMMARY -->
+                <div class="section">
+                    <h2>💰 Financial Summary</h2>
+                    <p style="color: #666; margin-bottom: 15px">
+                        Ringkasan income, expense, balance
+                    </p>
+                    <button onclick="testGetSummary()">Get Summary</button>
+                    <div class="response" id="summaryResponse"></div>
+                </div>
+
+                <!-- CREATE TRANSACTION -->
+                <div class="section">
+                    <h2>➕ Create Transaction</h2>
+                    <div class="form-group">
+                        <label>Type:</label>
+                        <select id="transactionType">
+                            <option value="income">Income (Pemasukan)</option>
+                            <option value="expense">
+                                Expense (Pengeluaran)
+                            </option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount:</label>
+                        <input
+                            type="number"
+                            id="transactionAmount"
+                            value="1000000"
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label>Description:</label>
+                        <input
+                            type="text"
+                            id="transactionDesc"
+                            value="Test transaksi dari API"
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label>Date:</label>
+                        <input
+                            type="date"
+                            id="transactionDate"
+                            value="2024-12-08"
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label>Commodity Name:</label>
+                        <input type="text" id="commodityName" value="Padi" />
+                    </div>
+                    <button onclick="testCreateTransaction()">
+                        Create Transaction
+                    </button>
+                    <div class="response" id="createTransactionResponse"></div>
+                </div>
+
+                <!-- GET TRANSACTIONS -->
+                <div class="section">
+                    <h2>📋 Get Transactions</h2>
+                    <p style="color: #666; margin-bottom: 15px">
+                        Semua transaksi user login
+                    </p>
+                    <button onclick="testGetTransactions()">
+                        Get My Transactions
+                    </button>
+                    <div class="response" id="transactionsResponse"></div>
+                </div>
+
+                <!-- GET COMMODITY TYPES -->
+                <div class="section">
+                    <h2>📦 Commodity Types</h2>
+                    <p style="color: #666; margin-bottom: 15px">
+                        6 kategori komoditas
+                    </p>
+                    <button onclick="testGetTypes()">Get Types</button>
+                    <div class="response" id="typesResponse"></div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            const API_BASE = "http://127.0.0.1:8000/api";
+            let authToken = null;
+
+            // Check server status
+            async function checkServer() {
+                try {
+                    const response = await fetch("http://127.0.0.1:8000");
+                    document.getElementById("serverStatus").innerHTML =
+                        '<span class="success">✅ Online</span>';
+                } catch (error) {
+                    document.getElementById("serverStatus").innerHTML =
+                        '<span class="error">❌ Offline</span>';
+                }
+            }
+
+            // Login
+            async function testLogin() {
+                const email = document.getElementById("loginEmail").value;
+                const password = document.getElementById("loginPassword").value;
+
+                try {
+                    const response = await fetch(`${API_BASE}/login`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            Accept: "application/json",
+                        },
+                        body: JSON.stringify({ email, password }),
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        authToken = data.data.token;
+                        document.getElementById("tokenDisplay").textContent =
+                            authToken.substring(0, 20) + "...";
+                        document.getElementById(
+                            "loginResponse"
+                        ).innerHTML = `<span class="success">✅ Login Success!</span><pre>${JSON.stringify(
+                            data,
+                            null,
+                            2
+                        )}</pre>`;
+                    } else {
+                        document.getElementById(
+                            "loginResponse"
+                        ).innerHTML = `<span class="error">❌ Login Failed</span><pre>${JSON.stringify(
+                            data,
+                            null,
+                            2
+                        )}</pre>`;
+                    }
+                } catch (error) {
+                    document.getElementById(
+                        "loginResponse"
+                    ).innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+                }
+            }
+
+            // Get Commodities
+            async function testGetCommodities() {
+                if (!authToken) {
+                    alert("Please login first!");
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${API_BASE}/commodities`, {
+                        headers: {
+                            Authorization: `Bearer ${authToken}`,
+                            Accept: "application/json",
+                        },
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        document.getElementById(
+                            "commoditiesResponse"
+                        ).innerHTML = `<span class="success">✅ Found ${
+                            data.data.length
+                        } commodities</span><pre>${JSON.stringify(
+                            data,
+                            null,
+                            2
+                        )}</pre>`;
+                    } else {
+                        document.getElementById(
+                            "commoditiesResponse"
+                        ).innerHTML = `<span class="error">❌ Failed</span><pre>${JSON.stringify(
+                            data,
+                            null,
+                            2
+                        )}</pre>`;
+                    }
+                } catch (error) {
+                    document.getElementById(
+                        "commoditiesResponse"
+                    ).innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+                }
+            }
+
+            // Get Summary
+            async function testGetSummary() {
+                if (!authToken) {
+                    alert("Please login first!");
+                    return;
+                }
+
+                try {
+                    const response = await fetch(
+                        `${API_BASE}/transactions/summary`,
+                        {
+                            headers: {
+                                Authorization: `Bearer ${authToken}`,
+                                Accept: "application/json",
+                            },
+                        }
+                    );
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        const summary = data.data;
+                        document.getElementById(
+                            "summaryResponse"
+                        ).innerHTML = `<span class="success">✅ Success</span>
+                        <div style="margin-top: 10px;">
+                            <strong>Total Transactions:</strong> ${
+                                summary.total_transactions
+                            }<br>
+                            <strong>Income:</strong> Rp ${summary.income.toLocaleString(
+                                "id-ID"
+                            )}<br>
+                            <strong>Expense:</strong> Rp ${summary.expense.toLocaleString(
+                                "id-ID"
+                            )}<br>
+                            <strong>Balance:</strong> Rp ${summary.balance.toLocaleString(
+                                "id-ID"
+                            )}
+                        </div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>`;
+                    } else {
+                        document.getElementById(
+                            "summaryResponse"
+                        ).innerHTML = `<span class="error">❌ Failed</span><pre>${JSON.stringify(
+                            data,
+                            null,
+                            2
+                        )}</pre>`;
+                    }
+                } catch (error) {
+                    document.getElementById(
+                        "summaryResponse"
+                    ).innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+                }
+            }
+
+            // Create Transaction
+            async function testCreateTransaction() {
+                if (!authToken) {
+                    alert("Please login first!");
+                    return;
+                }
+
+                const type = document.getElementById("transactionType").value;
+                const amount = parseFloat(
+                    document.getElementById("transactionAmount").value
+                );
+                const description =
+                    document.getElementById("transactionDesc").value;
+                const date = document.getElementById("transactionDate").value;
+                const commodityName =
+                    document.getElementById("commodityName").value;
+
+                try {
+                    const response = await fetch(`${API_BASE}/transactions`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${authToken}`,
+                            Accept: "application/json",
+                        },
+                        body: JSON.stringify({
+                            type,
+                            amount,
+                            description,
+                            date,
+                            commodity_name: commodityName,
+                        }),
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        document.getElementById(
+                            "createTransactionResponse"
+                        ).innerHTML = `<span class="success">✅ Transaction Created! 
+                        <br>Now check web admin at: <a href="http://127.0.0.1:8000/admin/transactions" target="_blank">Transactions Page</a></span>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>`;
+                    } else {
+                        document.getElementById(
+                            "createTransactionResponse"
+                        ).innerHTML = `<span class="error">❌ Failed</span><pre>${JSON.stringify(
+                            data,
+                            null,
+                            2
+                        )}</pre>`;
+                    }
+                } catch (error) {
+                    document.getElementById(
+                        "createTransactionResponse"
+                    ).innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+                }
+            }
+
+            // Get Transactions
+            async function testGetTransactions() {
+                if (!authToken) {
+                    alert("Please login first!");
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${API_BASE}/transactions`, {
+                        headers: {
+                            Authorization: `Bearer ${authToken}`,
+                            Accept: "application/json",
+                        },
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        document.getElementById(
+                            "transactionsResponse"
+                        ).innerHTML = `<span class="success">✅ Found ${
+                            data.data.length
+                        } transactions</span><pre>${JSON.stringify(
+                            data,
+                            null,
+                            2
+                        )}</pre>`;
+                    } else {
+                        document.getElementById(
+                            "transactionsResponse"
+                        ).innerHTML = `<span class="error">❌ Failed</span><pre>${JSON.stringify(
+                            data,
+                            null,
+                            2
+                        )}</pre>`;
+                    }
+                } catch (error) {
+                    document.getElementById(
+                        "transactionsResponse"
+                    ).innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+                }
+            }
+
+            // Get Types
+            async function testGetTypes() {
+                if (!authToken) {
+                    alert("Please login first!");
+                    return;
+                }
+
+                try {
+                    const response = await fetch(
+                        `${API_BASE}/commodity-types`,
+                        {
+                            headers: {
+                                Authorization: `Bearer ${authToken}`,
+                                Accept: "application/json",
+                            },
+                        }
+                    );
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        document.getElementById(
+                            "typesResponse"
+                        ).innerHTML = `<span class="success">✅ Found ${
+                            data.data.length
+                        } types</span>
+                        <ul style="margin-top: 10px; padding-left: 20px;">
+                            ${data.data
+                                .map((type) => `<li>${type}</li>`)
+                                .join("")}
+                        </ul>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>`;
+                    } else {
+                        document.getElementById(
+                            "typesResponse"
+                        ).innerHTML = `<span class="error">❌ Failed</span><pre>${JSON.stringify(
+                            data,
+                            null,
+                            2
+                        )}</pre>`;
+                    }
+                } catch (error) {
+                    document.getElementById(
+                        "typesResponse"
+                    ).innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+                }
+            }
+
+            // Check server on load
+            checkServer();
+        </script>
+    </body>
+</html>

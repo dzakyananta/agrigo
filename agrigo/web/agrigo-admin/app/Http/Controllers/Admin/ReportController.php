@@ -31,11 +31,11 @@ class ReportController extends Controller
 
         // Monthly transactions
         $monthlyData = Transaction::select(
-                DB::raw('MONTH(transaction_date) as month'),
+                DB::raw('MONTH(date) as month'),
                 DB::raw('SUM(CASE WHEN type = "income" THEN amount ELSE 0 END) as income'),
                 DB::raw('SUM(CASE WHEN type = "expense" THEN amount ELSE 0 END) as expense')
             )
-            ->whereYear('transaction_date', date('Y'))
+            ->whereYear('date', date('Y'))
             ->groupBy('month')
             ->orderBy('month')
             ->get();
@@ -46,7 +46,7 @@ class ReportController extends Controller
 
         // User statistics
         $totalFarmers = User::where('role', 'farmer')->count();
-        $activeUsers = User::where('status', 'active')->count();
+        $activeUsers = User::where('is_active', true)->count();
 
         return view('admin.reports.index', compact(
             'totalTransactions',

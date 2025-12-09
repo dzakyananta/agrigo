@@ -19,16 +19,281 @@ class _WeatherPageState extends State<WeatherPage> {
   List<Map<String, dynamic>> weeklyForecast = [];
   String? errorMessage;
 
-  final List<String> locations = [
-    'Jakarta',
-    'Bandung',
-    'Surabaya',
-    'Medan',
-    'Makassar',
-    'Palembang',
-    'Semarang',
-    'Yogyakarta',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Delay untuk memastikan widget sudah mounted
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkLocationPermissionAndLoad();
+    });
+  }
+
+  Future<void> _checkLocationPermissionAndLoad() async {
+    if (!mounted) return;
+
+    try {
+      // Check location permission terlebih dahulu
+      LocationPermission permission = await Geolocator.checkPermission();
+
+      // Jika permission belum pernah diminta atau ditolak, tampilkan popup custom
+      if (permission == LocationPermission.denied) {
+        // Tampilkan popup custom untuk meminta permission
+        bool shouldRequestPermission = await _showPermissionRequestDialog();
+
+        if (shouldRequestPermission) {
+          // Request permission dari sistem
+          permission = await Geolocator.requestPermission();
+
+          if (permission == LocationPermission.denied) {
+            // Permission ditolak, load default Jakarta
+            _loadInitialWeatherData();
+            return;
+          }
+        } else {
+          // User memilih skip, load default Jakarta
+          _loadInitialWeatherData();
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        // Permission ditolak permanen, tampilkan dialog
+        _showPermissionDeniedForeverDialog();
+        return;
+      }
+
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        // Layanan lokasi tidak aktif
+        _showLocationServiceDialog();
+        return;
+      }
+
+      // Permission granted dan service enabled, load weather data
+      _loadInitialWeatherData();
+    } catch (e) {
+      print('Error checking location permission: $e');
+      _loadInitialWeatherData();
+    }
+  }
+
+  Future<bool> _showPermissionRequestDialog() async {
+    return await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: Column(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(15),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.location_on,
+                      color: Colors.green,
+                      size: 40,
+                    ),
+                  ),
+                  SizedBox(height: 15),
+                  Text(
+                    'Izinkan Akses Lokasi',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Untuk memberikan informasi cuaca yang akurat sesuai lokasi Anda saat ini, aplikasi memerlukan izin akses lokasi.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[700],
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 15),
+                  Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Lokasi hanya digunakan untuk menampilkan cuaca',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.blue[700],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(false);
+                  },
+                  child: Text(
+                    'Nanti Saja',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(true);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  ),
+                  child: Text(
+                    'Izinkan',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+              actionsPadding: EdgeInsets.fromLTRB(20, 0, 20, 20),
+            );
+          },
+        ) ??
+        false;
+  }
+
+  void _showLocationServiceDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.location_off, color: Colors.orange),
+              SizedBox(width: 10),
+              Text('Layanan Lokasi Tidak Aktif'),
+            ],
+          ),
+          content: Text(
+            'Aplikasi memerlukan akses lokasi untuk menampilkan cuaca di sekitar Anda. Silakan aktifkan layanan lokasi di pengaturan perangkat Anda.\n\nAnda akan melihat cuaca Jakarta sebagai default.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Load with default location (Jakarta)
+                _loadInitialWeatherData();
+              },
+              child: Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showPermissionDeniedForeverDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.settings, color: Colors.red),
+              SizedBox(width: 10),
+              Text('Izin Lokasi Diperlukan'),
+            ],
+          ),
+          content: Text(
+            'Izin akses lokasi telah ditolak secara permanen.\n\nUntuk menggunakan lokasi saat ini, silakan:\n1. Buka Pengaturan aplikasi\n2. Aktifkan izin Lokasi\n\nUntuk saat ini, Anda akan melihat cuaca Jakarta.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                // Try to open app settings
+                await Geolocator.openAppSettings();
+                // Load with default location
+                _loadInitialWeatherData();
+              },
+              child: Text(
+                'Buka Pengaturan',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Load with default location
+                _loadInitialWeatherData();
+              },
+              child: Text('Nanti Saja'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _loadInitialWeatherData() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      print('WeatherPage: Starting initial load...');
+
+      // Coba ambil lokasi dari user terlebih dahulu
+      String? userLocation = await UserService.getUserLocation();
+      if (userLocation != null && userLocation.isNotEmpty) {
+        selectedLocation = userLocation;
+        print('WeatherPage: Using saved location: $userLocation');
+      } else {
+        print('WeatherPage: No saved location, using Jakarta');
+      }
+
+      // Coba gunakan API terlebih dahulu
+      print('WeatherPage: Fetching weather for $selectedLocation...');
+      await _getWeatherByCity(selectedLocation);
+      print('WeatherPage: Weather loaded successfully');
+    } catch (e) {
+      print('WeatherPage: Initial load failed - $e');
+      print('WeatherPage: Using fallback data...');
+      // Jika gagal, gunakan fallback data
+      _loadFallbackWeatherData(selectedLocation);
+    }
+  }
 
   Future<void> _refreshWeatherDataAsync() async {
     setState(() {
@@ -45,58 +310,6 @@ class _WeatherPageState extends State<WeatherPage> {
       await Future.delayed(Duration(milliseconds: 300));
       _loadFallbackWeatherData(selectedLocation);
     }
-  }
-
-  void _showLocationPicker() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: EdgeInsets.symmetric(vertical: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            SizedBox(height: 20),
-            Text(
-              'Pilih Lokasi',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-            ),
-            SizedBox(height: 20),
-            ...locations.map(
-              (location) => ListTile(
-                leading: Icon(Icons.location_city, color: Colors.green),
-                title: Text(location),
-                onTap: () {
-                  Navigator.pop(context);
-                  _getWeatherByCity(location);
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserLocationAndWeather();
   }
 
   Future<void> _loadUserLocationAndWeather() async {
@@ -125,17 +338,31 @@ class _WeatherPageState extends State<WeatherPage> {
         position.longitude,
       );
 
-      Map<String, dynamic> weather =
-          await LocalWeatherService.getWeatherByCoordinates(
-            position.latitude,
-            position.longitude,
-          );
-
       List<Map<String, dynamic>> forecast =
           await LocalWeatherService.getWeatherForecast(
             position.latitude,
             position.longitude,
           );
+
+      // SINKRONISASI: Gunakan forecast[0] untuk currentWeather
+      Map<String, dynamic> weather;
+      if (forecast.isNotEmpty) {
+        weather = {
+          'temperature': forecast[0]['temperature'],
+          'feelsLike': forecast[0]['feelsLike'],
+          'humidity': forecast[0]['humidity'],
+          'pressure': forecast[0]['pressure'],
+          'description': forecast[0]['description'],
+          'main': forecast[0]['main'],
+          'icon': forecast[0]['icon'],
+          'windSpeed': forecast[0]['windSpeed'],
+          'visibility': forecast[0]['visibility'],
+          'cityName': locationName,
+          'coordinates': {'lat': position.latitude, 'lon': position.longitude},
+        };
+      } else {
+        throw Exception('No forecast data available');
+      }
 
       setState(() {
         selectedLocation = locationName;
@@ -164,16 +391,41 @@ class _WeatherPageState extends State<WeatherPage> {
     });
 
     try {
-      Map<String, dynamic> weather = await LocalWeatherService.getWeatherByCity(
-        city,
-      );
+      print('_getWeatherByCity: Getting weather for $city');
+
+      // Dapatkan koordinat kota terlebih dahulu
+      Map<String, dynamic> tempWeather =
+          await LocalWeatherService.getWeatherByCity(city);
+      print('_getWeatherByCity: Got weather data');
 
       // Ambil koordinat dari hasil cuaca untuk forecast
-      double lat = weather['coordinates']['lat'];
-      double lon = weather['coordinates']['lon'];
+      double lat = tempWeather['coordinates']['lat'];
+      double lon = tempWeather['coordinates']['lon'];
+      print('_getWeatherByCity: Got coordinates - lat: $lat, lon: $lon');
 
       List<Map<String, dynamic>> forecast =
           await LocalWeatherService.getWeatherForecast(lat, lon);
+      print('_getWeatherByCity: Got forecast data, ${forecast.length} items');
+
+      // SINKRONISASI: Gunakan forecast[0] untuk currentWeather
+      Map<String, dynamic> weather;
+      if (forecast.isNotEmpty) {
+        weather = {
+          'temperature': forecast[0]['temperature'],
+          'feelsLike': forecast[0]['feelsLike'],
+          'humidity': forecast[0]['humidity'],
+          'pressure': forecast[0]['pressure'],
+          'description': forecast[0]['description'],
+          'main': forecast[0]['main'],
+          'icon': forecast[0]['icon'],
+          'windSpeed': forecast[0]['windSpeed'],
+          'visibility': forecast[0]['visibility'],
+          'cityName': city,
+          'coordinates': {'lat': lat, 'lon': lon},
+        };
+      } else {
+        throw Exception('No forecast data available');
+      }
 
       setState(() {
         selectedLocation = city;
@@ -183,8 +435,9 @@ class _WeatherPageState extends State<WeatherPage> {
         isLoading = false;
         errorMessage = null;
       });
+      print('_getWeatherByCity: State updated successfully');
     } catch (e) {
-      print('Error loading weather data: $e');
+      print('_getWeatherByCity: Error - $e');
       setState(() {
         errorMessage = 'Gagal memuat data cuaca. Menggunakan data lokal.';
       });
@@ -195,16 +448,17 @@ class _WeatherPageState extends State<WeatherPage> {
   }
 
   void _loadFallbackWeatherData(String city) {
+    print('_loadFallbackWeatherData: Loading fallback data for $city');
+
     // Data cuaca realistis berdasarkan waktu dan kota
     DateTime now = DateTime.now();
-    int currentHour = now.hour;
     int currentDay = now.day;
 
     // Variasi suhu berdasarkan waktu
     double baseTemp = _getCityBaseTemp(city);
     double dailyVariation = (currentDay % 5) - 2; // Variasi harian
 
-    // Generate forecast data yang lebih realistis DULU
+    // Generate forecast data yang lebih realistis
     List<Map<String, dynamic>> fallbackForecast = [];
     for (int i = 0; i < 24; i++) {
       DateTime futureTime = now.add(Duration(hours: i));
@@ -227,6 +481,7 @@ class _WeatherPageState extends State<WeatherPage> {
     }
 
     // Ambil data cuaca saat ini dari forecast jam pertama (index 0)
+    // SINKRONISASI: currentWeather menggunakan data yang SAMA dengan hourlyForecast[0]
     Map<String, dynamic> currentForecast = fallbackForecast[0];
 
     Map<String, dynamic> fallbackWeather = {
@@ -251,6 +506,8 @@ class _WeatherPageState extends State<WeatherPage> {
       isLoading = false;
       errorMessage = null;
     });
+
+    print('_loadFallbackWeatherData: Fallback data loaded successfully');
   }
 
   double _getCityBaseTemp(String city) {
@@ -865,92 +1122,55 @@ class _WeatherPageState extends State<WeatherPage> {
                     children: [
                       SizedBox(height: 10),
 
-                      // Location dengan dropdown dan GPS
+                      // Location display only
                       Container(
                         margin: EdgeInsets.symmetric(horizontal: 16),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            // GPS Location Button
-                            GestureDetector(
-                              onTap: _getCurrentLocationWeather,
-                              child: Container(
-                                padding: EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.green.withOpacity(0.3),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(30),
+                            border: Border.all(
+                              color: Colors.grey.withOpacity(0.3),
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.15),
+                                blurRadius: 10,
+                                offset: Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.location_on,
+                                color: Colors.black87,
+                                size: 18,
+                              ),
+                              SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  selectedLocation,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.black87,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                ),
-                                child: Icon(
-                                  Icons.my_location,
-                                  color: Colors.green,
-                                  size: 20,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                            ),
-
-                            // Location Text dengan dropdown - Wrapped in shape
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => _showLocationPicker(),
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 12,
-                                  ),
-                                  margin: EdgeInsets.symmetric(horizontal: 8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(30),
-                                    border: Border.all(
-                                      color: Colors.grey.withOpacity(0.3),
-                                      width: 1.5,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.15),
-                                        blurRadius: 10,
-                                        offset: Offset(0, 3),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.location_on,
-                                        color: Colors.black87,
-                                        size: 18,
-                                      ),
-                                      SizedBox(width: 8),
-                                      Flexible(
-                                        child: Text(
-                                          selectedLocation,
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            color: Colors.black87,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      SizedBox(width: 8),
-                                      Icon(
-                                        Icons.keyboard_arrow_down,
-                                        color: Colors.black87,
-                                        size: 18,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
+
                       SizedBox(height: 20),
 
                       // Main Weather Card - Sesuai gambar dengan lebar maksimal
@@ -1132,7 +1352,7 @@ class _WeatherPageState extends State<WeatherPage> {
                                       icon: Icons.remove_red_eye,
                                       label: 'Jarak Pandang',
                                       value:
-                                          '${(currentWeather!['visibility'] / 1000).round()} km',
+                                          '${((currentWeather!['visibility'] ?? 10000) / 1000).round()} km',
                                       iconColor: Colors.teal,
                                     ),
                                   ),
@@ -1142,7 +1362,7 @@ class _WeatherPageState extends State<WeatherPage> {
                                       icon: Icons.compress,
                                       label: 'Tekanan',
                                       value:
-                                          '${currentWeather!['pressure'].round()} hPa',
+                                          '${(currentWeather!['pressure'] ?? 1013).round()} hPa',
                                       iconColor: Colors.orange,
                                     ),
                                   ),

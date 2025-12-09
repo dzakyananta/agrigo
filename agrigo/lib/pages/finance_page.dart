@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'transaction_form_page.dart';
 import 'commodity_detail_page.dart';
 import '../services/schedule_service.dart';
+import '../services/api_service.dart';
 
 class FinancePage extends StatefulWidget {
   const FinancePage({super.key});
@@ -246,10 +247,45 @@ class _FinancePageState extends State<FinancePage> {
   }
 
   Future<void> _addTransaction(Map<String, dynamic> transaction) async {
-    setState(() {
-      transactions.add(transaction);
-    });
-    await _saveTransactionsToStorage();
+    try {
+      // Simpan langsung ke local storage (offline mode)
+      print('💾 Saving transaction offline...');
+
+      // Convert API format to local display format
+      final localTransaction = {
+        'type': transaction['type'],
+        'komoditas': transaction['commodity_name'],
+        'tanggal': DateFormat(
+          'dd/MM/yyyy',
+        ).format(DateTime.parse(transaction['date'])),
+        'target': transaction['source'] ?? '-',
+        'totalHarga': transaction['amount'].toString(),
+        'catatan': transaction['description'],
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      };
+
+      setState(() {
+        transactions.add(localTransaction);
+      });
+      await _saveTransactionsToStorage();
+
+      print('✅ Transaction saved offline successfully');
+    } catch (e) {
+      print('❌ Error saving transaction: $e');
+      // Show error to user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Gagal menyimpan: ${e.toString().replaceAll('Exception: ', '')}',
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+      rethrow;
+    }
   }
 
   Future<void> _deleteTransaction(int index) async {

@@ -27,7 +27,7 @@ class WeatherController extends Controller
             'temperature' => 'required|numeric',
             'humidity' => 'required|numeric|min:0|max:100',
             'rainfall' => 'nullable|numeric|min:0',
-            'weather_condition' => 'required|string|max:100',
+            'condition' => 'required|string|max:100',
             'wind_speed' => 'nullable|numeric|min:0',
             'description' => 'nullable|string',
         ]);

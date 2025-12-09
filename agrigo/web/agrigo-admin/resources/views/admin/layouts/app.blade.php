@@ -260,6 +260,13 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.chatbot-faqs.*') ? 'active' : '' }}" 
+                       href="{{ route('admin.chatbot-faqs.index') }}">
+                        <i class="fas fa-robot"></i>
+                        Chatbot FAQs
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" 
                        href="{{ route('admin.reports.index') }}">
                         <i class="fas fa-chart-bar"></i>

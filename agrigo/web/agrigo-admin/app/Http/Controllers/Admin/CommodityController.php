@@ -23,15 +23,8 @@ class CommodityController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'category' => 'required|string|max:100',
+            'type' => 'required|string|max:100',
             'description' => 'nullable|string',
-            'unit' => 'required|string|max:50',
-            'current_price' => 'required|numeric|min:0',
-            'min_price' => 'nullable|numeric|min:0',
-            'max_price' => 'nullable|numeric|min:0',
-            'harvest_season' => 'nullable|string|max:100',
-            'storage_requirements' => 'nullable|string',
-            'quality_standards' => 'nullable|string',
             'is_active' => 'boolean'
         ]);
 
@@ -45,7 +38,7 @@ class CommodityController extends Controller
 
     public function show($id)
     {
-        $commodity = Commodity::with(['transactions', 'priceHistories'])->findOrFail($id);
+        $commodity = Commodity::with(['transactions', 'schedules'])->findOrFail($id);
         return view('admin.commodities.show', compact('commodity'));
     }
 
@@ -61,15 +54,8 @@ class CommodityController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'category' => 'required|string|max:100',
+            'type' => 'required|string|max:100',
             'description' => 'nullable|string',
-            'unit' => 'required|string|max:50',
-            'current_price' => 'required|numeric|min:0',
-            'min_price' => 'nullable|numeric|min:0',
-            'max_price' => 'nullable|numeric|min:0',
-            'harvest_season' => 'nullable|string|max:100',
-            'storage_requirements' => 'nullable|string',
-            'quality_standards' => 'nullable|string',
             'is_active' => 'boolean'
         ]);
 
