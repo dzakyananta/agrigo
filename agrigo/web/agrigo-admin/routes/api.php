@@ -2,11 +2,9 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\AuthApiController;
-use App\Http\Controllers\Api\ScheduleApiController;
-use App\Http\Controllers\Api\CommodityApiController;
-use App\Http\Controllers\Api\TransactionApiController;
-use App\Http\Controllers\Api\ChatbotApiController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\FarmerController;
+use App\Http\Controllers\Api\NotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,41 +13,31 @@ use App\Http\Controllers\Api\ChatbotApiController;
 */
 
 // Public routes
-Route::post('/register', [AuthApiController::class, 'register']);
-Route::post('/login', [AuthApiController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register']);
 
-// Protected routes
+// Protected routes (require authentication)
 Route::middleware('auth:sanctum')->group(function () {
-    // Auth
-    Route::get('/profile', [AuthApiController::class, 'profile']);
-    Route::put('/profile', [AuthApiController::class, 'updateProfile']);
-    Route::post('/logout', [AuthApiController::class, 'logout']);
-    
-    // Commodities
-    Route::get('/commodities', [CommodityApiController::class, 'index']);
-    Route::get('/commodities/{id}', [CommodityApiController::class, 'show']);
-    Route::get('/commodities/type/{type}', [CommodityApiController::class, 'getByType']);
-    Route::get('/commodity-types', [CommodityApiController::class, 'getTypes']);
+    Route::get('/user', [AuthController::class, 'user']);
+    Route::post('/logout', [AuthController::class, 'logout']);
     
     // Schedules
-    Route::get('/schedules', [ScheduleApiController::class, 'index']);
-    Route::post('/schedules', [ScheduleApiController::class, 'store']);
-    Route::put('/schedules/{id}', [ScheduleApiController::class, 'update']);
-    Route::delete('/schedules/{id}', [ScheduleApiController::class, 'destroy']);
+    Route::get('/schedules', [FarmerController::class, 'schedules']);
+    Route::post('/schedules', [FarmerController::class, 'createSchedule']);
+    Route::put('/schedules/{id}', [FarmerController::class, 'updateSchedule']);
+    Route::delete('/schedules/{id}', [FarmerController::class, 'deleteSchedule']);
     
     // Transactions
-    Route::get('/transactions', [TransactionApiController::class, 'index']);
-    Route::get('/transactions/summary', [TransactionApiController::class, 'summary']);
-    Route::post('/transactions', [TransactionApiController::class, 'store']);
-    Route::get('/transactions/{id}', [TransactionApiController::class, 'show']);
-    Route::put('/transactions/{id}', [TransactionApiController::class, 'update']);
-    Route::delete('/transactions/{id}', [TransactionApiController::class, 'destroy']);
+    Route::get('/transactions', [FarmerController::class, 'transactions']);
+    Route::post('/transactions', [FarmerController::class, 'createTransaction']);
+    Route::get('/transactions/summary', [FarmerController::class, 'transactionSummary']);
     
-    // Chatbot FAQs
-    Route::get('/chatbot/faqs', [ChatbotApiController::class, 'index']);
-    Route::get('/chatbot/faqs/categories', [ChatbotApiController::class, 'getCategories']);
-    Route::get('/chatbot/faqs/category/{category}', [ChatbotApiController::class, 'getByCategory']);
-    Route::get('/chatbot/faqs/search', [ChatbotApiController::class, 'search']);
-    Route::get('/chatbot/faqs/smart-search', [ChatbotApiController::class, 'smartSearch']);
-    Route::get('/chatbot/faqs/{id}', [ChatbotApiController::class, 'show']);
+    // Commodities
+    Route::get('/commodities', [FarmerController::class, 'commodities']);
+    
+    // Weather
+    Route::get('/weather', [FarmerController::class, 'weather']);
+    
+    // FCM Token
+    Route::post('/fcm-token', [NotificationController::class, 'saveFcmToken']);
 });

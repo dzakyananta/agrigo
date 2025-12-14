@@ -14,11 +14,11 @@ class Commodity extends Model
         'name',
         'type',
         'description',
-        'is_active'
+        'is_active',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean'
+        'is_active' => 'boolean',
     ];
 
     public function transactions()

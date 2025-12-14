@@ -9,9 +9,11 @@ import 'change_password_page.dart';
 import 'change_phone_number_page.dart';
 import 'schedule_page.dart';
 import 'notification_page.dart';
+import 'login_page.dart';
 import '../services/user_service.dart';
 import '../services/schedule_service.dart';
 import '../services/notification_service.dart';
+import '../services/firebase_service.dart';
 
 class DashboardPage extends StatefulWidget {
   final String userName;
@@ -78,6 +80,66 @@ class _DashboardPageState extends State<DashboardPage> {
       notifications = loadedNotifications;
       unreadCount = count;
     });
+  }
+
+  Future<void> _handleLogout(BuildContext context) async {
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Konfirmasi Keluar'),
+        content: const Text('Apakah Anda yakin ingin keluar dari aplikasi?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Keluar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      try {
+        // Show loading
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+
+        // Sign out from Firebase
+        await FirebaseService.logout();
+
+        // Clear local storage
+        await UserService.clearUserData();
+
+        // Navigate to login page
+        if (mounted) {
+          Navigator.of(context).pop(); // Close loading dialog
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+            (route) => false,
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          Navigator.of(context).pop(); // Close loading dialog
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal logout: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 
   Widget _getSelectedPage() {
@@ -1114,6 +1176,34 @@ class _DashboardPageState extends State<DashboardPage> {
               );
             },
           ),
+          const SizedBox(height: 32),
+          
+          // Logout Button
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: OutlinedButton(
+                onPressed: () => _handleLogout(context),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.red, width: 1.5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Keluar',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -1276,7 +1366,6 @@ class _DashboardPageState extends State<DashboardPage> {
     if (picked != null && picked != startDate) {
       setState(() {
         startDate = picked;
-        // Auto calculate end date (example: 90 days later for most crops)
         endDate = picked.add(const Duration(days: 90));
       });
     }

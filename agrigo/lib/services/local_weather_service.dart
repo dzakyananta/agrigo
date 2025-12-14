@@ -58,14 +58,12 @@ class LocalWeatherService {
         '$_baseUrl?latitude=$lat&longitude=$lon&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,pressure_msl&timezone=Asia%2FJakarta',
       );
 
-      final response = await http
-          .get(url)
-          .timeout(
-            Duration(seconds: 10),
-            onTimeout: () {
-              throw Exception('Request timeout');
-            },
-          );
+      final response = await http.get(url).timeout(
+        Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('Request timeout');
+        },
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -112,14 +110,12 @@ class LocalWeatherService {
         '$_baseUrl?latitude=$lat&longitude=$lon&hourly=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=Asia%2FJakarta&forecast_days=2',
       );
 
-      final response = await http
-          .get(url)
-          .timeout(
-            Duration(seconds: 10),
-            onTimeout: () {
-              throw Exception('Request timeout');
-            },
-          );
+      final response = await http.get(url).timeout(
+        Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('Request timeout');
+        },
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -142,18 +138,18 @@ class LocalWeatherService {
 
     return {
       'temperature': current['temperature_2m'].toDouble(),
-      'feelsLike': current['temperature_2m'].toDouble() + 2, // Estimasi
+      'feelsLike': current['temperature_2m'].toDouble() + 2,
       'humidity': current['relative_humidity_2m'],
       'pressure': current['pressure_msl'],
       'description': _getWeatherDescription(current['weather_code']),
       'main': _getWeatherMain(current['weather_code']),
       'icon': _getWeatherIcon(current['weather_code']),
       'windSpeed': current['wind_speed_10m'].toDouble(),
-      'windDegree': 0, // Not available in free API
-      'visibility': 10000, // Default value
-      'cloudiness': 0, // Not available in free API
-      'sunrise': DateTime.now().subtract(Duration(hours: 2)), // Estimasi
-      'sunset': DateTime.now().add(Duration(hours: 8)), // Estimasi
+      'windDegree': 0,
+      'visibility': 10000,
+      'cloudiness': 0,
+      'sunrise': DateTime.now().subtract(Duration(hours: 2)),
+      'sunset': DateTime.now().add(Duration(hours: 8)),
       'cityName': 'Current Location',
       'country': 'ID',
       'coordinates': {'lat': lat, 'lon': lon},

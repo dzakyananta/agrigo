@@ -153,6 +153,75 @@ class PriceHistory {
 // Transaction Model
 class TransactionModel {
   final String id;
+  final String userId;
+  final String type; // income or expense
+  final String category; // fertilizer, seed, harvest, sale, etc
+  final double amount;
+  final String description;
+  final DateTime date;
+  final String? commodityId;
+  final String? commodityName;
+  final double? quantity;
+  final String? unit;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  TransactionModel({
+    required this.id,
+    required this.userId,
+    required this.type,
+    required this.category,
+    required this.amount,
+    required this.description,
+    required this.date,
+    this.commodityId,
+    this.commodityName,
+    this.quantity,
+    this.unit,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory TransactionModel.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    return TransactionModel(
+      id: doc.id,
+      userId: data['userId'] ?? '',
+      type: data['type'] ?? 'expense',
+      category: data['category'] ?? '',
+      amount: (data['amount'] ?? 0).toDouble(),
+      description: data['description'] ?? '',
+      date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      commodityId: data['commodityId'],
+      commodityName: data['commodityName'],
+      quantity: data['quantity'] != null ? (data['quantity'] as num).toDouble() : null,
+      unit: data['unit'],
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'userId': userId,
+      'type': type,
+      'category': category,
+      'amount': amount,
+      'description': description,
+      'date': Timestamp.fromDate(date),
+      'commodityId': commodityId,
+      'commodityName': commodityName,
+      'quantity': quantity,
+      'unit': unit,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
+    };
+  }
+}
+
+// Legacy Transaction Model (for marketplace)
+class MarketTransactionModel {
+  final String id;
   final String buyerId;
   final String sellerId;
   final String commodityId;
@@ -165,7 +234,7 @@ class TransactionModel {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  TransactionModel({
+  MarketTransactionModel({
     required this.id,
     required this.buyerId,
     required this.sellerId,
@@ -180,9 +249,9 @@ class TransactionModel {
     required this.updatedAt,
   });
 
-  factory TransactionModel.fromFirestore(DocumentSnapshot doc) {
+  factory MarketTransactionModel.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    return TransactionModel(
+    return MarketTransactionModel(
       id: doc.id,
       buyerId: data['buyerId'] ?? '',
       sellerId: data['sellerId'] ?? '',
@@ -219,6 +288,75 @@ class TransactionModel {
 }
 
 enum TransactionStatus { pending, confirmed, inProgress, completed, cancelled }
+
+// Schedule Model
+class ScheduleModel {
+  final String id;
+  final String userId;
+  final String title;
+  final String description;
+  final DateTime startDate;
+  final DateTime endDate;
+  final String status; // planned, ongoing, completed, cancelled
+  final String crop;
+  final double area;
+  final String unit;
+  final String? notes;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  ScheduleModel({
+    required this.id,
+    required this.userId,
+    required this.title,
+    required this.description,
+    required this.startDate,
+    required this.endDate,
+    required this.status,
+    required this.crop,
+    required this.area,
+    required this.unit,
+    this.notes,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory ScheduleModel.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    return ScheduleModel(
+      id: doc.id,
+      userId: data['userId'] ?? '',
+      title: data['title'] ?? '',
+      description: data['description'] ?? '',
+      startDate: (data['startDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      endDate: (data['endDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      status: data['status'] ?? 'planned',
+      crop: data['crop'] ?? '',
+      area: (data['area'] ?? 0).toDouble(),
+      unit: data['unit'] ?? 'hektar',
+      notes: data['notes'],
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'userId': userId,
+      'title': title,
+      'description': description,
+      'startDate': Timestamp.fromDate(startDate),
+      'endDate': Timestamp.fromDate(endDate),
+      'status': status,
+      'crop': crop,
+      'area': area,
+      'unit': unit,
+      'notes': notes,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
+    };
+  }
+}
 
 // Weather Model
 class WeatherModel {

@@ -312,4 +312,4 @@ class ApiService {
   }
 }
 
-// File ini TETAP DIGUNAKAN untuk Web Admin yang pakai MySQL
+// File ini PERFECT untuk kebutuhan Anda!

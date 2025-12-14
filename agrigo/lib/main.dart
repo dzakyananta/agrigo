@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:provider/provider.dart';
-import 'pages/login_page.dart';
-import 'services/auth_service.dart';
+import 'firebase_options.dart';
+import 'services/notification_service.dart';
 import 'services/firebase_service.dart';
-import 'services/weather_service.dart';
-// import 'firebase_options.dart'; // Uncomment setelah setup Firebase
+// import 'services/auth_service.dart'; // Comment dulu
+// import 'services/weather_service.dart'; // Comment dulu
+import 'pages/login_page.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
-  // Initialize Firebase
-  // await Firebase.initializeApp(
-  //   options: DefaultFirebaseOptions.currentPlatform,
-  // );
+  // Optional: Suppress AppCheck warning
+  // FirebaseAppCheck.instance.activate();
 
   runApp(const MyApp());
 }
@@ -52,32 +53,26 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // Logo animation controller
     _logoController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
 
-    // Text animation controller
     _textController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
-    _logoAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _logoController, curve: Curves.easeOut));
+    _logoAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _logoController, curve: Curves.easeOut),
+    );
 
-    _textAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeIn));
+    _textAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _textController, curve: Curves.easeIn),
+    );
 
-    // Start logo animation immediately
     _logoController.forward();
 
-    // Show text after 3 seconds (logo phase complete)
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         setState(() {
@@ -87,7 +82,6 @@ class _SplashScreenState extends State<SplashScreen>
       }
     });
 
-    // Navigate to login after total 6 seconds (3 seconds logo + 3 seconds with text)
     Future.delayed(const Duration(seconds: 6), () {
       if (mounted) {
         Navigator.pushReplacement(
@@ -117,14 +111,11 @@ class _SplashScreenState extends State<SplashScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Logo with slide animation
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 800),
                   curve: Curves.easeInOut,
                   transform: Matrix4.translationValues(
-                    _showText
-                        ? -15.0
-                        : 0.0, // Slide slightly to the left when text appears
+                    _showText ? -15.0 : 0.0,
                     0.0,
                     0.0,
                   ),
@@ -145,39 +136,33 @@ class _SplashScreenState extends State<SplashScreen>
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) =>
                               Container(
-                                width: 120,
-                                height: 120,
-                                child: const Icon(
-                                  Icons.local_florist,
-                                  color: Color(0xFF2E8B25),
-                                  size: 100,
-                                ),
-                              ),
+                            width: 120,
+                            height: 120,
+                            child: const Icon(
+                              Icons.local_florist,
+                              color: Color(0xFF2E8B25),
+                              size: 100,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-
-                // Text with fade in animation
                 if (_showText) ...[
                   const SizedBox(width: 12),
                   FadeTransition(
                     opacity: _textAnimation,
                     child: SlideTransition(
-                      position:
-                          Tween<Offset>(
-                            begin: const Offset(
-                              0.5,
-                              0,
-                            ), // Start further from right
-                            end: Offset.zero,
-                          ).animate(
-                            CurvedAnimation(
-                              parent: _textController,
-                              curve: Curves.easeOut,
-                            ),
-                          ),
+                      position: Tween<Offset>(
+                        begin: const Offset(0.5, 0),
+                        end: Offset.zero,
+                      ).animate(
+                        CurvedAnimation(
+                          parent: _textController,
+                          curve: Curves.easeOut,
+                        ),
+                      ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -190,9 +175,7 @@ class _SplashScreenState extends State<SplashScreen>
                                   style: TextStyle(
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(
-                                      0xFFFFA500,
-                                    ), // Orange/Yellow color
+                                    color: Color(0xFFFFA500),
                                     letterSpacing: 1.2,
                                   ),
                                 ),
@@ -201,7 +184,7 @@ class _SplashScreenState extends State<SplashScreen>
                                   style: TextStyle(
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF2E8B25), // Green color
+                                    color: Color(0xFF2E8B25),
                                     letterSpacing: 1.2,
                                   ),
                                 ),

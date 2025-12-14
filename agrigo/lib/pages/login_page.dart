@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'register_page.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // ADD THIS IMPORT
+import '../services/firebase_service.dart';
 import 'dashboard_page.dart';
+import 'register_page.dart';
 import 'forgot_password_page.dart';
 
 // Custom painter for top large circle with P-wave
@@ -103,8 +105,8 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isPasswordVisible = false;
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -113,163 +115,164 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
+  // Email/Password Login - ENHANCED with better error handling
+  Future<void> _handleEmailLogin() async {
+    if (!_formKey.currentState!.validate()) return;
 
-      // Simulate login process
-      await Future.delayed(const Duration(seconds: 2));
+    setState(() => _isLoading = true);
 
-      // Validasi dengan akun yang terdaftar
-      final identifier = _emailController.text.trim();
-      final password = _passwordController.text.trim();
+    try {
+      print('🔵 Attempting login with: ${_emailController.text.trim()}');
+      
+      // STEP 1: Login (will throw error if failed)
+      await FirebaseService.loginWithEmail(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
 
-      bool loginSuccess = _validateCredentials(identifier, password);
+      print('🟢 Login successful!');
 
-      setState(() {
-        _isLoading = false;
-      });
+      // STEP 2: Get current user ID WITHOUT accessing credential.user
+      final currentUserId = FirebaseService.userId;
+      
+      if (currentUserId != null && mounted) {
+        print('🔵 Fetching user data from Firestore...');
+        final userDoc = await FirebaseService.getUser(currentUserId);
+        String userName = 'User';
 
-      if (loginSuccess) {
-        print('===== LOGIN SUCCESS: Navigating to Dashboard =====');
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  DashboardPage(userName: _getUserName(identifier)),
-            ),
+        if (userDoc.exists) {
+          final userData = userDoc.data() as Map<String, dynamic>;
+          userName = userData['name'] ?? 'User';
+          print('🟢 User data found: $userName');
+        } else {
+          // Auto-create Firestore document for existing Firebase Auth users
+          print('⚠️ User document not found in Firestore - creating now...');
+          final currentUser = FirebaseService.currentUser;
+          await FirebaseService.createUser(
+            userId: currentUserId,
+            name: currentUser?.displayName ?? 'User',
+            email: currentUser?.email ?? _emailController.text.trim(),
+            phone: currentUser?.phoneNumber ?? '',
+            region: '',
           );
+          userName = currentUser?.displayName ?? 'User';
+          print('✅ User document created with name: $userName');
         }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Email/No. Handphone atau password salah!'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
+
+        print('🔵 Navigating to Dashboard...');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DashboardPage(userName: userName),
           ),
         );
+
+        print('✅ Navigation complete');
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Login berhasil! Selamat datang $userName'),
+            backgroundColor: const Color(0xFF2E8B25),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      print('🔴 FirebaseAuthException: ${e.code} - ${e.message}');
+      String errorMessage = 'Login gagal';
+
+      if (e.code == 'user-not-found') {
+        errorMessage = '❌ Email tidak terdaftar.\n\nEmail ini mungkin terdaftar dengan provider lain (Google/Facebook).';
+      } else if (e.code == 'wrong-password') {
+        errorMessage = '❌ Password salah.\n\nSilakan coba lagi atau gunakan "Lupa Password".';
+      } else if (e.code == 'invalid-email') {
+        errorMessage = '❌ Format email tidak valid';
+      } else if (e.code == 'invalid-credential') {
+        errorMessage = '❌ Email atau password salah.\n\nJika Anda mendaftar dengan Google/Facebook, silakan login dengan provider tersebut.';
+      } else {
+        errorMessage = '❌ ${e.message}';
+      }
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Login Gagal'),
+            content: Text(errorMessage),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      print('🔴 Unexpected error: $e');
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Error'),
+            content: Text('Terjadi kesalahan:\n\n$e'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
 
-  bool _validateCredentials(String identifier, String password) {
-    // Akun yang terdaftar di sistem dengan email dan nomor handphone
-    final Map<String, Map<String, String>> registeredAccounts = {
-      // Login dengan email
-      'admin@agrigo.com': {
-        'password': 'admin123',
-        'name': 'Admin Agrigo',
-        'role': 'admin',
-      },
-      'budi@farmer.com': {
-        'password': 'password123',
-        'name': 'Budi Santoso',
-        'role': 'farmer',
-      },
-      'siti@farmer.com': {
-        'password': 'password123',
-        'name': 'Siti Rahayu',
-        'role': 'farmer',
-      },
-      'buyer@agromandiri.com': {
-        'password': 'password123',
-        'name': 'PT Agro Mandiri',
-        'role': 'buyer',
-      },
-      'ahmad@farmer.com': {
-        'password': 'password123',
-        'name': 'Ahmad Wijaya',
-        'role': 'farmer',
-      },
-      'test@agrigo.com': {
-        'password': 'test123',
-        'name': 'User Test',
-        'role': 'farmer',
-      },
-      // Login dengan nomor handphone
-      '08123456789': {
-        'password': 'admin123',
-        'name': 'Admin Agrigo',
-        'role': 'admin',
-      },
-      '08234567890': {
-        'password': 'password123',
-        'name': 'Budi Santoso',
-        'role': 'farmer',
-      },
-      '08345678901': {
-        'password': 'password123',
-        'name': 'Siti Rahayu',
-        'role': 'farmer',
-      },
-      '08456789012': {
-        'password': 'password123',
-        'name': 'PT Agro Mandiri',
-        'role': 'buyer',
-      },
-      '08567890123': {
-        'password': 'password123',
-        'name': 'Ahmad Wijaya',
-        'role': 'farmer',
-      },
-      '08987654321': {
-        'password': 'test123',
-        'name': 'User Test',
-        'role': 'farmer',
-      },
-    };
-
-    // Normalize phone number (remove spaces, dashes)
-    String normalizedIdentifier = identifier.replaceAll(RegExp(r'[\s-]'), '');
-
-    return registeredAccounts.containsKey(normalizedIdentifier) &&
-        registeredAccounts[normalizedIdentifier]!['password'] == password;
-  }
-
-  String _getUserName(String identifier) {
-    final Map<String, String> userNames = {
-      // Email mapping
-      'admin@agrigo.com': 'Admin Agrigo',
-      'budi@farmer.com': 'Budi Santoso',
-      'siti@farmer.com': 'Siti Rahayu',
-      'buyer@agromandiri.com': 'PT Agro Mandiri',
-      'ahmad@farmer.com': 'Ahmad Wijaya',
-      'test@agrigo.com': 'User Test',
-      // Phone mapping
-      '08123456789': 'Admin Agrigo',
-      '08234567890': 'Budi Santoso',
-      '08345678901': 'Siti Rahayu',
-      '08456789012': 'PT Agro Mandiri',
-      '08567890123': 'Ahmad Wijaya',
-      '08987654321': 'User Test',
-    };
-
-    // Normalize phone number
-    String normalizedIdentifier = identifier.replaceAll(RegExp(r'[\s-]'), '');
-
-    return userNames[normalizedIdentifier] ??
-        (identifier.contains('@') ? identifier.split('@')[0] : 'User');
-  }
-
+  // Google Login - DISABLED temporarily due to Pigeon bug
   Future<void> _handleGoogleLogin() async {
-    // TODO: Implement Google login
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Google login belum diimplementasi'),
-        duration: Duration(seconds: 2),
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Google Login'),
+        content: const Text(
+          'Login Google sedang dalam perbaikan.\n\n'
+          'Silakan gunakan:\n'
+          '• Email & Password\n'
+          '• Daftar akun baru jika belum punya'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
       ),
     );
   }
 
+  // Facebook Login - DISABLED temporarily due to Pigeon bug
   Future<void> _handleFacebookLogin() async {
-    // TODO: Implement Facebook login
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Facebook login belum diimplementasi'),
-        duration: Duration(seconds: 2),
+    // Show info dialog instead of trying to login
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Facebook Login'),
+        content: const Text(
+          'Login Facebook sedang dalam perbaikan.\n\n'
+          'Silakan gunakan:\n'
+          '• Email & Password\n'
+          '• Google Sign-In'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
       ),
     );
   }
@@ -475,7 +478,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           child: TextFormField(
                             controller: _passwordController,
-                            obscureText: !_isPasswordVisible,
+                            obscureText: !_obscurePassword,
                             decoration: InputDecoration(
                               hintText: 'Ketik password anda',
                               prefixIcon: const Icon(
@@ -484,14 +487,14 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                               suffixIcon: IconButton(
                                 icon: Icon(
-                                  _isPasswordVisible
+                                  _obscurePassword
                                       ? Icons.visibility
                                       : Icons.visibility_off,
                                   color: const Color(0xFF2E8B25),
                                 ),
                                 onPressed: () {
                                   setState(() {
-                                    _isPasswordVisible = !_isPasswordVisible;
+                                    _obscurePassword = !_obscurePassword;
                                   });
                                 },
                               ),
@@ -537,7 +540,7 @@ class _LoginPageState extends State<LoginPage> {
                           width: double.infinity,
                           height: 50,
                           child: ElevatedButton(
-                            onPressed: _isLoading ? null : _handleLogin,
+                            onPressed: _isLoading ? null : _handleEmailLogin,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF2E8B25),
                               shape: RoundedRectangleBorder(
@@ -603,34 +606,37 @@ class _LoginPageState extends State<LoginPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            // Google button
-                            GestureDetector(
-                              onTap: _handleGoogleLogin,
-                              child: Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.grey[300]!,
-                                    width: 1,
-                                  ),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Colors.black12,
-                                      blurRadius: 4,
-                                      offset: Offset(0, 2),
+                            // Google button - DISABLED
+                            Opacity(
+                              opacity: 0.5,
+                              child: GestureDetector(
+                                onTap: _handleGoogleLogin,
+                                child: Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.grey[300]!,
+                                      width: 1,
                                     ),
-                                  ],
-                                ),
-                                child: const Center(
-                                  child: Text(
-                                    'G',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.red,
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Colors.black12,
+                                        blurRadius: 4,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Center(
+                                    child: Text(
+                                      'G',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.red,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -639,34 +645,37 @@ class _LoginPageState extends State<LoginPage> {
 
                             const SizedBox(width: 20),
 
-                            // Facebook button
-                            GestureDetector(
-                              onTap: _handleFacebookLogin,
-                              child: Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.grey[300]!,
-                                    width: 1,
-                                  ),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Colors.black12,
-                                      blurRadius: 4,
-                                      offset: Offset(0, 2),
+                            // Facebook button - DISABLED
+                            Opacity(
+                              opacity: 0.5,
+                              child: GestureDetector(
+                                onTap: _handleFacebookLogin,
+                                child: Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.grey[300]!,
+                                      width: 1,
                                     ),
-                                  ],
-                                ),
-                                child: const Center(
-                                  child: Text(
-                                    'f',
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blue,
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Colors.black12,
+                                        blurRadius: 4,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Center(
+                                    child: Text(
+                                      'f',
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.blue,
+                                      ),
                                     ),
                                   ),
                                 ),

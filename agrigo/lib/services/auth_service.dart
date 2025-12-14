@@ -1,186 +1,177 @@
+import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'firebase_service.dart';
 
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
+  static final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  // Get current user
   static User? get currentUser => _auth.currentUser;
-
-  // Auth state stream
   static Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // Register with email and password
+  // ================= REGISTER =================
   static Future<UserCredential?> registerWithEmailPassword({
+    required String name,
     required String email,
     required String password,
-    required String name,
     required String phone,
     required String region,
     List<String>? crops,
+    File? profileImage,
   }) async {
     try {
+      print('🔵 [1/3] Creating Auth user...');
       UserCredential result = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      User? user = result.user;
-      if (user != null) {
-        // Create user profile in Firestore
-        await FirebaseService.createUser(
-          userId: user.uid,
-          name: name,
-          email: email,
-          phone: phone,
-          region: region,
-          crops: crops,
-        );
+      final User? user = result.user;
+      if (user == null) throw Exception("User is null after registration");
 
-        // Update display name
-        await user.updateDisplayName(name);
+      print('🟢 [1/3] Auth user created: ${user.uid}');
+
+      String? imageUrl;
+      if (profileImage != null) {
+        print('🔵 [2/3] Uploading profile image...');
+        final ref = _storage.ref().child("profile_images/${user.uid}.jpg");
+        await ref.putFile(profileImage);
+        imageUrl = await ref.getDownloadURL();
+        print('🟢 [2/3] Image uploaded!');
       }
+
+      print('🔵 [3/3] Saving to Firestore...');
+      await FirebaseService.createUser(
+        userId: user.uid,
+        name: name,
+        email: email,
+        phone: phone,
+        region: region,
+        profileImage: imageUrl,
+        crops: crops,
+      );
+      print('🟢 [3/3] Firestore saved!');
+
+      // SKIP updateDisplayName to avoid Pigeon bug
+      print('✅ Registration completed successfully!');
 
       return result;
     } catch (e) {
-      throw Exception('Registration failed: ${e.toString()}');
+      print("❌ Registration Error: $e");
+      rethrow;
     }
   }
 
-  // Sign in with email and password
+  // ================= LOGIN =================
   static Future<UserCredential?> signInWithEmailPassword({
     required String email,
     required String password,
   }) async {
     try {
-      UserCredential result = await _auth.signInWithEmailAndPassword(
+      return await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
-      return result;
     } catch (e) {
       throw Exception('Login failed: ${e.toString()}');
     }
   }
 
-  // Sign out
+  // ================= GOOGLE LOGIN =================
+  static Future<UserCredential?> signInWithGoogle() async {
+    return await FirebaseService.signInWithGoogle();
+  }
+
+  // ================= FACEBOOK LOGIN =================
+  static Future<UserCredential?> signInWithFacebook() async {
+    return await FirebaseService.signInWithFacebook();
+  }
+
+  // ================= LOGOUT =================
   static Future<void> signOut() async {
-    try {
-      await _auth.signOut();
-    } catch (e) {
-      throw Exception('Sign out failed: ${e.toString()}');
-    }
+    await FirebaseService.logout();
   }
 
-  // Reset password
+  // ================= PASSWORD RESET =================
   static Future<void> resetPassword(String email) async {
-    try {
-      await _auth.sendPasswordResetEmail(email: email);
-    } catch (e) {
-      throw Exception('Password reset failed: ${e.toString()}');
-    }
+    await _auth.sendPasswordResetEmail(email: email);
   }
 
-  // Update password
+  // ================= UPDATE PASSWORD =================
   static Future<void> updatePassword(String newPassword) async {
-    try {
-      User? user = _auth.currentUser;
-      if (user != null) {
-        await user.updatePassword(newPassword);
-      } else {
-        throw Exception('No user is currently signed in');
-      }
-    } catch (e) {
-      throw Exception('Password update failed: ${e.toString()}');
-    }
-  }
-
-  // Update email
-  static Future<void> updateEmail(String newEmail) async {
-    try {
-      User? user = _auth.currentUser;
-      if (user != null) {
-        await user.updateEmail(newEmail);
-
-        // Update email in Firestore as well
-        await FirebaseService.updateUserProfile(userId: user.uid);
-      } else {
-        throw Exception('No user is currently signed in');
-      }
-    } catch (e) {
-      throw Exception('Email update failed: ${e.toString()}');
-    }
-  }
-
-  // Verify email
-  static Future<void> sendEmailVerification() async {
-    try {
-      User? user = _auth.currentUser;
-      if (user != null && !user.emailVerified) {
-        await user.sendEmailVerification();
-      }
-    } catch (e) {
-      throw Exception('Email verification failed: ${e.toString()}');
-    }
-  }
-
-  // Check if email is verified
-  static bool get isEmailVerified {
     User? user = _auth.currentUser;
-    return user?.emailVerified ?? false;
+    if (user != null) {
+      await user.updatePassword(newPassword);
+    } else {
+      throw Exception('No user is currently signed in');
+    }
   }
 
-  // Delete account
+  // ================= UPDATE EMAIL =================
+  static Future<void> updateEmail(String newEmail) async {
+    User? user = _auth.currentUser;
+
+    if (user != null) {
+      await user.updateEmail(newEmail);
+
+      await FirebaseService.updateUserProfile(
+        userId: user.uid,
+        email: newEmail,
+      );
+    } else {
+      throw Exception('No user is currently signed in');
+    }
+  }
+
+  // ================= VERIFY EMAIL =================
+  static Future<void> sendEmailVerification() async {
+    User? user = _auth.currentUser;
+    if (user != null && !user.emailVerified) {
+      await user.sendEmailVerification();
+    }
+  }
+
+  static bool get isEmailVerified =>
+      _auth.currentUser?.emailVerified ?? false;
+
+  // ================= DELETE ACCOUNT =================
   static Future<void> deleteAccount() async {
-    try {
-      User? user = _auth.currentUser;
-      if (user != null) {
-        // Delete user data from Firestore first
-        await _db.collection('users').doc(user.uid).delete();
-
-        // Delete user account
-        await user.delete();
-      }
-    } catch (e) {
-      throw Exception('Account deletion failed: ${e.toString()}');
+    User? user = _auth.currentUser;
+    if (user != null) {
+      await _db.collection('users').doc(user.uid).delete();
+      await user.delete();
     }
   }
 
-  // Reauthenticate user (required for sensitive operations)
+  // ================= REAUTHENTICATE =================
   static Future<void> reauthenticateWithPassword(String password) async {
-    try {
-      User? user = _auth.currentUser;
-      if (user != null && user.email != null) {
-        AuthCredential credential = EmailAuthProvider.credential(
-          email: user.email!,
-          password: password,
-        );
-        await user.reauthenticateWithCredential(credential);
-      }
-    } catch (e) {
-      throw Exception('Reauthentication failed: ${e.toString()}');
+    User? user = _auth.currentUser;
+
+    if (user != null && user.email != null) {
+      AuthCredential credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: password,
+      );
+      await user.reauthenticateWithCredential(credential);
     }
   }
 
-  // Get user profile data
+  // ================= GET USER PROFILE =================
   static Future<Map<String, dynamic>?> getUserProfile() async {
-    try {
-      User? user = _auth.currentUser;
-      if (user != null) {
-        DocumentSnapshot doc = await FirebaseService.getUser(user.uid);
-        if (doc.exists) {
-          return doc.data() as Map<String, dynamic>;
-        }
-      }
-      return null;
-    } catch (e) {
-      throw Exception('Failed to get user profile: ${e.toString()}');
+    User? user = _auth.currentUser;
+
+    if (user != null) {
+      DocumentSnapshot doc = await FirebaseService.getUser(user.uid);
+      return doc.exists ? doc.data() as Map<String, dynamic> : null;
     }
+
+    return null;
   }
 
-  // Update user profile
+  // ================= UPDATE PROFILE =================
   static Future<void> updateUserProfile({
     String? name,
     String? phone,
@@ -188,54 +179,41 @@ class AuthService {
     String? profileImage,
     List<String>? crops,
   }) async {
-    try {
-      User? user = _auth.currentUser;
-      if (user != null) {
-        // Update display name in Auth if name is provided
-        if (name != null) {
-          await user.updateDisplayName(name);
-        }
+    User? user = _auth.currentUser;
 
-        // Update profile image in Auth if provided
-        if (profileImage != null) {
-          await user.updatePhotoURL(profileImage);
-        }
+    if (user != null) {
+      if (name != null) await user.updateDisplayName(name);
+      if (profileImage != null) await user.updatePhotoURL(profileImage);
 
-        // Update user data in Firestore
-        await FirebaseService.updateUserProfile(
-          userId: user.uid,
-          name: name,
-          phone: phone,
-          region: region,
-          profileImage: profileImage,
-          crops: crops,
-        );
-      }
-    } catch (e) {
-      throw Exception('Profile update failed: ${e.toString()}');
+      await FirebaseService.updateUserProfile(
+        userId: user.uid,
+        name: name,
+        phone: phone,
+        region: region,
+        profileImage: profileImage,
+        crops: crops,
+      );
     }
   }
 
-  // Check if user is admin
+  // ================= CHECK ADMIN =================
   static Future<bool> isAdmin() async {
-    try {
-      User? user = _auth.currentUser;
-      if (user != null) {
-        DocumentSnapshot doc = await FirebaseService.getUser(user.uid);
-        if (doc.exists) {
-          Map<String, dynamic> userData = doc.data() as Map<String, dynamic>;
-          return userData['role'] == 'admin';
-        }
-      }
-      return false;
-    } catch (e) {
-      return false;
+    User? user = _auth.currentUser;
+
+    if (user != null) {
+      DocumentSnapshot doc = await FirebaseService.getUser(user.uid);
+      if (!doc.exists) return false;
+
+      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      return data['role'] == 'admin';
     }
+
+    return false;
   }
 
-  // Get error message in Indonesian
-  static String getErrorMessage(String errorCode) {
-    switch (errorCode) {
+  // ================= ERROR MESSAGE =================
+  static String getErrorMessage(String code) {
+    switch (code) {
       case 'weak-password':
         return 'Password terlalu lemah';
       case 'email-already-in-use':
@@ -250,10 +228,8 @@ class AuthService {
         return 'Akun telah dinonaktifkan';
       case 'too-many-requests':
         return 'Terlalu banyak percobaan, coba lagi nanti';
-      case 'operation-not-allowed':
-        return 'Operasi tidak diizinkan';
       default:
-        return 'Terjadi kesalahan: $errorCode';
+        return 'Terjadi kesalahan: $code';
     }
   }
 }

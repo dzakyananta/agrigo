@@ -14,9 +14,47 @@ use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\AppSettingController;
 use App\Http\Controllers\ActivityLogController;
+use App\Services\FirebaseService;
 
 Route::get('/', function () {
     return redirect('/admin/login');
+});
+
+// Test Firebase Connection - Auth Only (Firestore requires gRPC extension)
+Route::get('/test-firebase', function () {
+    try {
+        $factory = (new \Kreait\Firebase\Factory)
+            ->withServiceAccount(base_path(env('FIREBASE_CREDENTIALS')));
+        
+        $auth = $factory->createAuth();
+        
+        // Get list of users from Firebase Authentication
+        $users = $auth->listUsers($maxResults = 5);
+        
+        $userList = [];
+        foreach ($users as $user) {
+            $userList[] = [
+                'uid' => $user->uid,
+                'email' => $user->email,
+                'displayName' => $user->displayName,
+                'emailVerified' => $user->emailVerified,
+                'disabled' => $user->disabled,
+            ];
+        }
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Firebase Authentication connected successfully',
+            'note' => 'Showing users from Firebase Authentication (Firestore requires gRPC extension for full integration)',
+            'users_count' => count($userList),
+            'users' => $userList
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
 });
 
 // Admin Authentication Routes
