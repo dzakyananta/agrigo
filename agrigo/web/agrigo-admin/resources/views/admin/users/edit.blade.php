@@ -61,22 +61,6 @@
                         </div>
                         
                         <div class="col-md-6 mb-3">
-                            <label for="role" class="form-label">User Role *</label>
-                            <select class="form-select" id="role" name="role" required>
-                                <option value="">Select Role</option>
-                                <option value="farmer" {{ old('role', $user->role) === 'farmer' ? 'selected' : '' }}>
-                                    Farmer
-                                </option>
-                                <option value="buyer" {{ old('role', $user->role) === 'buyer' ? 'selected' : '' }}>
-                                    Buyer
-                                </option>
-                                <option value="admin" {{ old('role', $user->role) === 'admin' ? 'selected' : '' }}>
-                                    Admin
-                                </option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
                             <label for="status" class="form-label">Account Status *</label>
                             <select class="form-select" id="status" name="status" required>
                                 <option value="active" {{ old('status', $user->status ?? 'active') === 'active' ? 'selected' : '' }}>
@@ -110,33 +94,6 @@
                             <label for="address" class="form-label">Address</label>
                             <input type="text" class="form-control" id="address" name="address" 
                                    value="{{ old('address', $user->profile->address ?? '') }}">
-                        </div>
-                    </div>
-
-                    <!-- Farmer Specific Information -->
-                    <div class="row mb-4" id="farmerFields" style="display: {{ old('role', $user->role) === 'farmer' ? 'block' : 'none' }}">
-                        <div class="col-12">
-                            <h6 class="text-success border-bottom pb-2 mb-3">
-                                <i class="fas fa-leaf me-2"></i>Farmer Information
-                            </h6>
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label for="farm_size" class="form-label">Farm Size (hectares)</label>
-                            <input type="number" step="0.1" class="form-control" id="farm_size" name="farm_size" 
-                                   value="{{ old('farm_size', $user->profile->farm_size ?? '') }}">
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label for="farm_location" class="form-label">Farm Location</label>
-                            <input type="text" class="form-control" id="farm_location" name="farm_location" 
-                                   value="{{ old('farm_location', $user->profile->farm_location ?? '') }}">
-                        </div>
-                        
-                        <div class="col-12 mb-3">
-                            <label for="crops_grown" class="form-label">Crops Grown</label>
-                            <textarea class="form-control" id="crops_grown" name="crops_grown" rows="3" 
-                                      placeholder="List the main crops grown (e.g., Rice, Corn, Vegetables)">{{ old('crops_grown', $user->profile->crops_grown ?? '') }}</textarea>
                         </div>
                     </div>
 
@@ -181,16 +138,3 @@
 </div>
 @endsection
 
-@section('scripts')
-<script>
-// Show/hide farmer fields based on role selection
-document.getElementById('role').addEventListener('change', function() {
-    const farmerFields = document.getElementById('farmerFields');
-    if (this.value === 'farmer') {
-        farmerFields.style.display = 'block';
-    } else {
-        farmerFields.style.display = 'none';
-    }
-});
-</script>
-@endsection

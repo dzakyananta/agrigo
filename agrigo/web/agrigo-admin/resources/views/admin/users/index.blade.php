@@ -1,164 +1,84 @@
 @extends('admin.layouts.app')
 
-@section('title', 'User Management - Agrigo Admin')
+@section('title', 'Pengguna - Agrigo Admin')
 
 @section('content')
 <div class="row mb-4">
-    <div class="col-md-6">
-        <h1 class="h3 mb-0 text-gray-800">
-            <i class="fas fa-users me-2"></i>User Management
+    <div class="col-12">
+        <h1 class="h3 mb-0" style="color: #1f2937; font-weight: 600;">
+            Pengguna
         </h1>
-        <p class="text-muted">Manage farmers and users in the system</p>
-    </div>
-    <div class="col-md-6 text-end">
-        <button class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i>Add New User
-        </button>
     </div>
 </div>
 
-<!-- Filter and Search -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card shadow">
-            <div class="card-body">
-                <form method="GET" class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Search Users</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            <input type="text" class="form-control" name="search" 
-                                   placeholder="Search by name or email..." 
-                                   value="{{ request('search') }}">
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Role</label>
-                        <select name="role" class="form-select">
-                            <option value="">All Roles</option>
-                            <option value="farmer" {{ request('role') === 'farmer' ? 'selected' : '' }}>Farmer</option>
-                            <option value="buyer" {{ request('role') === 'buyer' ? 'selected' : '' }}>Buyer</option>
-                            <option value="admin" {{ request('role') === 'admin' ? 'selected' : '' }}>Admin</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Status</label>
-                        <select name="status" class="form-select">
-                            <option value="">All Status</option>
-                            <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
-                            <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
-                            <option value="suspended" {{ request('status') === 'suspended' ? 'selected' : '' }}>Suspended</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">&nbsp;</label>
-                        <div class="d-grid gap-2 d-md-flex">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-filter me-2"></i>Filter
-                            </button>
-                            <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary">
-                                <i class="fas fa-undo me-2"></i>Reset
-                            </a>
-                        </div>
-                    </div>
-                </form>
+<!-- Main Content Card -->
+<div class="card shadow-sm" style="border: 2px solid #3b82f6; border-radius: 12px;">
+    <div class="card-body p-4">
+        <!-- Search and Add Button -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0">
+                        <i class="fas fa-search text-muted"></i>
+                    </span>
+                    <input type="text" class="form-control border-start-0" 
+                           placeholder="Cari pengguna" 
+                           id="searchInput"
+                           style="border-left: none;">
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <button class="btn btn-success">
+                    <i class="fas fa-plus me-2"></i>Tambah pengguna baru
+                </button>
             </div>
         </div>
-    </div>
-</div>
 
-<!-- Users Table -->
-<div class="row">
-    <div class="col-12">
-        <div class="table-container">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-white">
-                    <i class="fas fa-list me-2"></i>All Users ({{ $users->total() ?? 0 }})
-                </h6>
-            </div>
-            <div class="card-body p-0">
-                @if(isset($users) && $users->count() > 0)
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th>User</th>
-                                    <th>Role</th>
-                                    <th>Status</th>
-                                    <th>Profile Info</th>
-                                    <th>Joined Date</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($users as $user)
-                                <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="avatar avatar-md rounded-circle bg-primary text-white me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                                {{ strtoupper(substr($user->name, 0, 2)) }}
-                                            </div>
-                                            <div>
-                                                <div class="font-weight-bold">{{ $user->name }}</div>
-                                                <small class="text-muted">{{ $user->email }}</small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-{{ $user->role === 'farmer' ? 'success' : ($user->role === 'admin' ? 'danger' : 'info') }}">
-                                            <i class="fas fa-{{ $user->role === 'farmer' ? 'leaf' : ($user->role === 'admin' ? 'crown' : 'shopping-cart') }} me-1"></i>
-                                            {{ ucfirst($user->role ?? 'User') }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge status-{{ $user->status ?? 'active' }}">
-                                            {{ ucfirst($user->status ?? 'Active') }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        @if($user->profile)
-                                            <div class="small">
-                                                @if($user->profile->phone)
-                                                    <div><i class="fas fa-phone me-1"></i>{{ $user->profile->phone }}</div>
-                                                @endif
-                                                @if($user->profile->farm_location && $user->role === 'farmer')
-                                                    <div><i class="fas fa-map-marker-alt me-1"></i>{{ $user->profile->farm_location }}</div>
-                                                @endif
-                                            </div>
-                                        @else
-                                            <small class="text-muted">No profile data</small>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <div>{{ $user->created_at->format('M d, Y') }}</div>
-                                        <small class="text-muted">{{ $user->created_at->diffForHumans() }}</small>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <a href="{{ route('admin.users.show', $user->id) }}" 
-                                               class="btn btn-sm btn-outline-info" title="View Details">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <a href="{{ route('admin.users.edit', $user->id) }}" 
-                                               class="btn btn-sm btn-outline-warning" title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <button class="btn btn-sm btn-outline-{{ $user->status === 'active' ? 'secondary' : 'success' }}" 
-                                                    onclick="toggleUserStatus({{ $user->id }})" 
-                                                    title="{{ $user->status === 'active' ? 'Deactivate' : 'Activate' }}">
-                                                <i class="fas fa-{{ $user->status === 'active' ? 'ban' : 'check' }}"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-danger" 
-                                                    onclick="deleteUser({{ $user->id }})" title="Delete">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
+        <!-- Header with Filter -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0" style="color: #1f2937; font-weight: 600;">
+                Semua Pengguna ({{ $users->total() ?? 0 }})
+            </h5>
+            <button class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-filter me-1"></i> Filter
+            </button>
+        </div>
+
+        <!-- Users List -->
+        <div class="users-list">
+            @if(isset($users) && $users->count() > 0)
+                @foreach($users as $user)
+                <div class="card mb-3 shadow-sm" style="border: 1px solid #e5e7eb; border-radius: 10px;">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center flex-grow-1">
+                                <div class="avatar rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                     style="width: 50px; height: 50px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); flex-shrink: 0;">
+                                    <span class="text-white fw-bold">{{ strtoupper(substr($user->name, 0, 2)) }}</span>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold" style="color: #1f2937;">{{ $user->name }}</div>
+                                    <div class="small text-muted">
+                                        <i class="fas fa-calendar-alt me-1"></i>Bergabung {{ $user->created_at->format('d M Y') }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a href="{{ route('admin.users.edit', $user->id) }}" 
+                                   class="btn btn-sm btn-outline-primary" 
+                                   title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="deleteUser({{ $user->id }})" 
+                                        title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
+                </div>
+                @endforeach
                     
                     <!-- Pagination -->
                     @if($users->hasPages())

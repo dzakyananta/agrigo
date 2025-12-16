@@ -1,237 +1,165 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Reports & Analytics')
+@section('title', 'Laporan Regional Pertanian - Agrigo Admin')
 
 @section('content')
-<div class="container-fluid px-4">
-    <h1 class="h3 mb-4 text-gray-800">Reports & Analytics</h1>
-
-    <!-- Summary Cards -->
-    <div class="row mb-4">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-primary shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Total Transactions</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $totalTransactions }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-exchange-alt fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<div class="card shadow-sm mb-4" style="border: 2px solid #3b82f6; border-radius: 10px;">
+    <div class="card-body p-4">
+        <!-- Header -->
+        <div class="mb-4">
+            <h4 class="mb-0 fw-bold" style="color: #1f2937;">Laporan Regional Pertanian</h4>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-success shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Total Income</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">Rp {{ number_format($totalIncome, 0, ',', '.') }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-arrow-up fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-danger shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                                Total Expense</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">Rp {{ number_format($totalExpense, 0, ',', '.') }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-arrow-down fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-info shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Net Profit</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">Rp {{ number_format($netProfit, 0, ',', '.') }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-chart-line fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <!-- Top Commodities -->
-        <div class="col-lg-6 mb-4">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3" style="background: linear-gradient(135deg, #2E8B25 0%, #4CAF50 100%);">
-                    <h6 class="m-0 font-weight-bold text-white">
-                        <i class="fas fa-leaf me-2"></i>Top 5 Commodities
-                    </h6>
-                </div>
-                <div class="card-body">
-                    @if($topCommodities->count() > 0)
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Commodity</th>
-                                        <th>Transactions</th>
-                                        <th>Total Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($topCommodities as $item)
-                                    <tr>
-                                        <td>{{ $item->commodity->name ?? 'N/A' }}</td>
-                                        <td><span class="badge bg-primary">{{ $item->transaction_count }}</span></td>
-                                        <td>Rp {{ number_format($item->total_amount, 0, ',', '.') }}</td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    @else
-                        <p class="text-muted text-center">No commodity data available</p>
-                    @endif
-                </div>
-            </div>
-        </div>
-
-        <!-- Schedule Statistics -->
-        <div class="col-lg-6 mb-4">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);">
-                    <h6 class="m-0 font-weight-bold text-white">
-                        <i class="fas fa-calendar-alt me-2"></i>Schedule Statistics
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-6 mb-3">
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <h3 class="text-success">{{ $activeSchedules }}</h3>
-                                    <small class="text-muted">Active Schedules</small>
+        <!-- Regional Reports -->
+        <div class="row">
+            <!-- Jawa Barat -->
+            <div class="col-12 mb-4">
+                <div class="card shadow-sm" style="border: 1px solid #e5e7eb; border-radius: 10px;">
+                    <div class="card-body p-0">
+                        <div class="row g-0">
+                            <div class="col-md-7 p-3">
+                                <h5 class="mb-3 fw-bold" style="color: #1f2937;">Peta Sebaran Petani - Jawa Barat</h5>
+                                <div class="position-relative" style="height: 250px; background: #e5e7eb; border-radius: 8px; overflow: hidden;">
+                                    <img src="https://via.placeholder.com/600x250/4ade80/ffffff?text=Peta+Jawa+Barat" 
+                                         alt="Peta Jawa Barat" 
+                                         class="w-100 h-100" 
+                                         style="object-fit: cover;">
+                                    <div class="position-absolute bottom-0 start-0 p-2">
+                                        <span class="badge bg-light text-dark me-2">Peta</span>
+                                        <span class="badge bg-success">Statistik</span>
+                                    </div>
+                                    <div class="position-absolute top-0 end-0 p-2">
+                                        <button class="btn btn-sm btn-light rounded-circle mb-1" style="width: 35px; height: 35px;">
+                                            <i class="fas fa-plus"></i>
+                                        </button><br>
+                                        <button class="btn btn-sm btn-light rounded-circle mb-1" style="width: 35px; height: 35px;">
+                                            <i class="fas fa-minus"></i>
+                                        </button><br>
+                                        <button class="btn btn-sm btn-light rounded-circle" style="width: 35px; height: 35px;">
+                                            <i class="fas fa-info"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-6 mb-3">
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <h3 class="text-primary">{{ $completedSchedules }}</h3>
-                                    <small class="text-muted">Completed</small>
+                            <div class="col-md-5 p-4 d-flex flex-column justify-content-center" style="background: #f9fafb;">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="rounded-circle bg-success d-flex align-items-center justify-content-center me-3" 
+                                         style="width: 40px; height: 40px;">
+                                        <i class="fas fa-arrow-up text-white"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-muted small">Pendapatan Rata-rata Petani</div>
+                                        <div class="small text-success">4 minggu sebelumnya</div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <h3 class="text-info">{{ $totalFarmers }}</h3>
-                                    <small class="text-muted">Total Farmers</small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <h3 class="text-warning">{{ $activeUsers }}</h3>
-                                    <small class="text-muted">Active Users</small>
-                                </div>
+                                <h3 class="fw-bold mb-2" style="color: #1f2937;">Rp 5.250.000</h3>
+                                <div class="text-success mb-2">↑ 8% dari bulan lalu</div>
+                                <p class="text-muted small mb-0">Data diperoleh 4 minggu lalu untuk melacak dan menganalisa laporan petani</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Monthly Transactions Chart -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3 bg-gradient-primary text-white">
-                    <h6 class="m-0 font-weight-bold">
-                        <i class="fas fa-chart-area me-2"></i>Monthly Transaction Trends ({{ date('Y') }})
-                    </h6>
+            <!-- Lampung -->
+            <div class="col-12 mb-4">
+                <div class="card shadow-sm" style="border: 1px solid #e5e7eb; border-radius: 10px;">
+                    <div class="card-body p-0">
+                        <div class="row g-0">
+                            <div class="col-md-7 p-3">
+                                <h5 class="mb-3 fw-bold" style="color: #1f2937;">Peta Sebaran Petani - Lampung</h5>
+                                <div class="position-relative" style="height: 250px; background: #e5e7eb; border-radius: 8px; overflow: hidden;">
+                                    <img src="https://via.placeholder.com/600x250/60a5fa/ffffff?text=Peta+Lampung" 
+                                         alt="Peta Lampung" 
+                                         class="w-100 h-100" 
+                                         style="object-fit: cover;">
+                                    <div class="position-absolute bottom-0 start-0 p-2">
+                                        <span class="badge bg-light text-dark me-2">Peta</span>
+                                        <span class="badge bg-success">Statistik</span>
+                                    </div>
+                                    <div class="position-absolute top-0 end-0 p-2">
+                                        <button class="btn btn-sm btn-light rounded-circle mb-1" style="width: 35px; height: 35px;">
+                                            <i class="fas fa-plus"></i>
+                                        </button><br>
+                                        <button class="btn btn-sm btn-light rounded-circle mb-1" style="width: 35px; height: 35px;">
+                                            <i class="fas fa-minus"></i>
+                                        </button><br>
+                                        <button class="btn btn-sm btn-light rounded-circle" style="width: 35px; height: 35px;">
+                                            <i class="fas fa-info"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-5 p-4 d-flex flex-column justify-content-center" style="background: #f9fafb;">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="rounded-circle bg-success d-flex align-items-center justify-content-center me-3" 
+                                         style="width: 40px; height: 40px;">
+                                        <i class="fas fa-arrow-up text-white"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-muted small">Pendapatan Rata-rata Petani</div>
+                                        <div class="small text-success">4 minggu sebelumnya</div>
+                                    </div>
+                                </div>
+                                <h3 class="fw-bold mb-2" style="color: #1f2937;">Rp 6.300.000</h3>
+                                <div class="text-success mb-2">↑ 12% dari bulan lalu</div>
+                                <p class="text-muted small mb-0">Data diperoleh 4 minggu lalu untuk melacak dan menganalisa laporan petani</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <canvas id="monthlyChart" height="80"></canvas>
+            </div>
+
+            <!-- Jawa Tengah -->
+            <div class="col-12 mb-4">
+                <div class="card shadow-sm" style="border: 1px solid #e5e7eb; border-radius: 10px;">
+                    <div class="card-body p-0">
+                        <div class="row g-0">
+                            <div class="col-md-7 p-3">
+                                <h5 class="mb-3 fw-bold" style="color: #1f2937;">Peta Sebaran Petani - Jawa Tengah</h5>
+                                <div class="position-relative" style="height: 250px; background: #e5e7eb; border-radius: 8px; overflow: hidden;">
+                                    <img src="https://via.placeholder.com/600x250/34d399/ffffff?text=Peta+Jawa+Tengah" 
+                                         alt="Peta Jawa Tengah" 
+                                         class="w-100 h-100" 
+                                         style="object-fit: cover;">
+                                    <div class="position-absolute bottom-0 start-0 p-2">
+                                        <span class="badge bg-light text-dark me-2">Peta</span>
+                                        <span class="badge bg-success">Statistik</span>
+                                    </div>
+                                    <div class="position-absolute top-0 end-0 p-2">
+                                        <button class="btn btn-sm btn-light rounded-circle mb-1" style="width: 35px; height: 35px;">
+                                            <i class="fas fa-plus"></i>
+                                        </button><br>
+                                        <button class="btn btn-sm btn-light rounded-circle mb-1" style="width: 35px; height: 35px;">
+                                            <i class="fas fa-minus"></i>
+                                        </button><br>
+                                        <button class="btn btn-sm btn-light rounded-circle" style="width: 35px; height: 35px;">
+                                            <i class="fas fa-info"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-5 p-4 d-flex flex-column justify-content-center" style="background: #f9fafb;">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="rounded-circle bg-success d-flex align-items-center justify-content-center me-3" 
+                                         style="width: 40px; height: 40px;">
+                                        <i class="fas fa-arrow-up text-white"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-muted small">Pendapatan Rata-rata Petani</div>
+                                        <div class="small text-success">4 minggu sebelumnya</div>
+                                    </div>
+                                </div>
+                                <h3 class="fw-bold mb-2" style="color: #1f2937;">Rp 4.400.000</h3>
+                                <div class="text-success mb-2">↑ 5% dari bulan lalu</div>
+                                <p class="text-muted small mb-0">Data diperoleh 4 minggu lalu untuk melacak dan menganalisa laporan petani</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-@endsection
 
-@section('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-// Monthly Chart
-const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
-const monthlyData = @json($monthlyData);
-
-const labels = monthlyData.map(item => {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return months[item.month - 1];
-});
-const incomeData = monthlyData.map(item => item.income);
-const expenseData = monthlyData.map(item => item.expense);
-
-new Chart(monthlyCtx, {
-    type: 'line',
-    data: {
-        labels: labels,
-        datasets: [{
-            label: 'Income',
-            data: incomeData,
-            borderColor: '#4CAF50',
-            backgroundColor: 'rgba(76, 175, 80, 0.1)',
-            tension: 0.3
-        }, {
-            label: 'Expense',
-            data: expenseData,
-            borderColor: '#f44336',
-            backgroundColor: 'rgba(244, 67, 54, 0.1)',
-            tension: 0.3
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        plugins: {
-            legend: {
-                position: 'top',
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: {
-                    callback: function(value) {
-                        return 'Rp ' + value.toLocaleString('id-ID');
-                    }
-                }
-            }
-        }
-    }
-});
-</script>
 @endsection

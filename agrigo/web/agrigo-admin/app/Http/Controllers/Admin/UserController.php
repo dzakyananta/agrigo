@@ -13,19 +13,19 @@ class UserController extends Controller
 {
     public function index()
     {
-        $users = User::with('profile')->paginate(10);
+        $users = User::paginate(10);
         return view('admin.users.index', compact('users'));
     }
 
     public function show($id)
     {
-        $user = User::with('profile', 'transactions')->findOrFail($id);
+        $user = User::with('transactions')->findOrFail($id);
         return view('admin.users.show', compact('user'));
     }
 
     public function edit($id)
     {
-        $user = User::with('profile')->findOrFail($id);
+        $user = User::findOrFail($id);
         return view('admin.users.edit', compact('user'));
     }
 
@@ -36,14 +36,12 @@ class UserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => ['required', 'email', Rule::unique('users')->ignore($user->id)],
-            'role' => 'required|in:farmer,admin,buyer',
             'status' => 'required|in:active,inactive,suspended'
         ]);
 
         $user->update([
             'name' => $request->name,
             'email' => $request->email,
-            'role' => $request->role,
             'status' => $request->status
         ]);
 
@@ -51,10 +49,7 @@ class UserController extends Controller
         if ($user->profile) {
             $user->profile->update([
                 'phone' => $request->phone,
-                'address' => $request->address,
-                'farm_size' => $request->farm_size,
-                'farm_location' => $request->farm_location,
-                'crops_grown' => $request->crops_grown
+                'address' => $request->address
             ]);
         }
 

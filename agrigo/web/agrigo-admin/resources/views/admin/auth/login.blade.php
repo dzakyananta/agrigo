@@ -20,71 +20,58 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             min-height: 100vh;
-            overflow: hidden;
-        }
-        
-        .login-wrapper {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .login-left {
-            flex: 1;
+            background-color: #f5f5f5;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 20px;
+        }
+        
+        .login-container {
             background: #ffffff;
-            padding: 2rem;
-        }
-
-        .login-right {
-            flex: 1;
-            position: relative;
-            background: linear-gradient(135deg, #4ade80 0%, #22c55e 50%, #16a34a 100%);
-            overflow: hidden;
-        }
-
-        /* Decorative circles on the right */
-        .login-right::before {
-            content: '';
-            position: absolute;
-            width: 400px;
-            height: 400px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            top: -100px;
-            right: -100px;
-        }
-
-        .login-right::after {
-            content: '';
-            position: absolute;
-            width: 300px;
-            height: 300px;
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 50%;
-            bottom: -80px;
-            right: 50px;
-        }
-
-        .login-form-container {
-            width: 100%;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
             max-width: 400px;
+            width: 100%;
+            padding: 40px 35px;
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .logo-icon {
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        .logo-icon img {
+            width: 120px;
+            height: 120px;
+            object-fit: contain;
         }
 
         .login-header {
-            margin-bottom: 2.5rem;
+            text-align: center;
+            margin-bottom: 30px;
         }
 
         .login-header h2 {
             color: #1f2937;
             font-size: 1.75rem;
             font-weight: 600;
-            margin-bottom: 0.5rem;
+            margin-bottom: 8px;
+        }
+
+        .login-header p {
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin: 0;
         }
 
         .form-group {
-            margin-bottom: 1.25rem;
+            margin-bottom: 20px;
         }
 
         .form-group label {
@@ -92,42 +79,43 @@
             color: #374151;
             font-size: 0.875rem;
             font-weight: 500;
-            margin-bottom: 0.5rem;
+            margin-bottom: 8px;
         }
 
         .form-control {
             width: 100%;
-            padding: 0.75rem 1rem;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
+            padding: 12px 15px;
+            border: 2px solid #22c55e;
+            border-radius: 8px;
             font-size: 0.95rem;
-            transition: all 0.2s;
+            transition: all 0.3s;
+            background: #ffffff;
         }
 
         .form-control:focus {
             outline: none;
-            border-color: #22c55e;
+            border-color: #16a34a;
             box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
         }
 
         .btn-login {
             width: 100%;
-            padding: 0.875rem;
+            padding: 14px;
             background: #22c55e;
             color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
-            margin-top: 1rem;
+            transition: all 0.3s;
+            margin-top: 10px;
         }
 
         .btn-login:hover {
             background: #16a34a;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
         }
 
         .btn-login:active {
@@ -135,9 +123,9 @@
         }
 
         .alert {
-            padding: 0.875rem 1rem;
-            border-radius: 6px;
-            margin-bottom: 1.5rem;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
             font-size: 0.875rem;
         }
 
@@ -149,60 +137,60 @@
 
         /* Responsive */
         @media (max-width: 768px) {
-            .login-wrapper {
-                flex-direction: column;
+            .login-container {
+                padding: 30px 25px;
             }
 
-            .login-right {
-                min-height: 200px;
+            .logo-icon {
+                width: 70px;
+                height: 70px;
             }
 
-            .login-left {
-                padding: 1.5rem;
+            .logo-icon i {
+                font-size: 35px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="login-wrapper">
-        <div class="login-left">
-            <div class="login-form-container">
-                <div class="login-header">
-                    <h2>Login</h2>
-                </div>
-
-                @if ($errors->any())
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-circle me-2"></i>
-                        {{ $errors->first() }}
-                    </div>
-                @endif
-                
-                <form method="POST" action="{{ route('admin.login.post') }}">
-                    @csrf
-                    
-                    <div class="form-group">
-                        <label for="email">Username</label>
-                        <input type="email" class="form-control" id="email" name="email" 
-                               value="{{ old('email') }}" required autocomplete="email" autofocus>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="password">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" 
-                               required autocomplete="current-password">
-                    </div>
-                    
-                    <button type="submit" class="btn-login">
-                        Login
-                    </button>
-                </form>
+    <div class="login-container">
+        <div class="logo-container">
+            <div class="logo-icon">
+                <img src="{{ asset('images/logo.png') }}" alt="Agrigo Logo">
             </div>
         </div>
 
-        <div class="login-right">
-            <!-- Decorative background only -->
+        <div class="login-header">
+            <h2>Portal Admin</h2>
+            <p>Masuk Sebagai Admin Dengan Aman</p>
         </div>
+
+        @if ($errors->any())
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                {{ $errors->first() }}
+            </div>
+        @endif
+        
+        <form method="POST" action="{{ route('admin.login.post') }}">
+            @csrf
+            
+            <div class="form-group">
+                <label for="email">Username</label>
+                <input type="email" class="form-control" id="email" name="email" 
+                       value="{{ old('email') }}" required autocomplete="email" autofocus>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" class="form-control" id="password" name="password" 
+                       required autocomplete="current-password">
+            </div>
+            
+            <button type="submit" class="btn-login">
+                Login
+            </button>
+        </form>
     </div>
     
     <!-- Bootstrap 5 JS -->

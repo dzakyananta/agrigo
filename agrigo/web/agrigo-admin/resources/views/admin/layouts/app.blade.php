@@ -15,15 +15,16 @@
     
     <style>
         :root {
-            --primary-color: #4ade80;
-            --secondary-color: #059669;
+            --primary-color: #22c55e;
+            --secondary-color: #16a34a;
+            --blue-border: #3b82f6;
             --sidebar-width: 250px;
             --header-height: 70px;
         }
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            background: #ffffff;
             min-height: 100vh;
         }
         
@@ -34,23 +35,24 @@
             left: 0;
             width: var(--sidebar-width);
             height: 100vh;
-            background: linear-gradient(180deg, #065f46 0%, #047857 100%);
-            color: white;
+            background: #ffffff;
+            color: #1f2937;
             overflow-y: auto;
             transition: transform 0.3s ease;
             z-index: 1000;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.08);
+            border-right: 1px solid #e5e7eb;
         }
         
         .sidebar-header {
             padding: 1.5rem;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid #e5e7eb;
             text-align: center;
         }
         
         .sidebar-header h4 {
             margin: 0;
-            color: #4ade80;
+            color: #22c55e;
             font-weight: bold;
         }
         
@@ -63,20 +65,24 @@
         }
         
         .nav-link {
-            color: rgba(255,255,255,0.8);
+            color: #6b7280;
             padding: 0.75rem 1.5rem;
             display: flex;
             align-items: center;
             text-decoration: none;
             transition: all 0.3s ease;
-            border-radius: 0 25px 25px 0;
-            margin-right: 1rem;
+            border-radius: 8px;
+            margin: 0.25rem 0.75rem;
         }
         
-        .nav-link:hover, .nav-link.active {
-            background: rgba(74, 222, 128, 0.2);
-            color: #4ade80;
-            transform: translateX(5px);
+        .nav-link:hover {
+            background: #f0fdf4;
+            color: #22c55e;
+        }
+        
+        .nav-link.active {
+            background: #22c55e;
+            color: white;
         }
         
         .nav-link i {
@@ -111,10 +117,10 @@
         /* Stats Cards */
         .stats-card {
             background: white;
-            border-radius: 15px;
+            border-radius: 8px;
             padding: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            border-left: 4px solid var(--primary-color);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 2px solid var(--blue-border);
             transition: transform 0.3s ease;
         }
         
@@ -143,8 +149,9 @@
         /* Tables */
         .table-container {
             background: white;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 2px solid var(--blue-border);
             overflow: hidden;
         }
         
@@ -204,6 +211,31 @@
         .status-pending { background-color: #f59e0b; }
         .status-completed { background-color: #059669; }
         .status-cancelled { background-color: #dc2626; }
+        
+        /* Logout Button */
+        .btn-logout {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-logout:hover {
+            background: #dc2626;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+        
+        .btn-logout i {
+            font-size: 1rem;
+        }
     </style>
     
     @yield('styles')
@@ -228,53 +260,50 @@
                     <a class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" 
                        href="{{ route('admin.users.index') }}">
                         <i class="fas fa-users"></i>
-                        User Management
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.transactions.*') ? 'active' : '' }}" 
-                       href="{{ route('admin.transactions.index') }}">
-                        <i class="fas fa-exchange-alt"></i>
-                        Transactions
+                        Pengguna
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.commodities.*') ? 'active' : '' }}" 
                        href="{{ route('admin.commodities.index') }}">
                         <i class="fas fa-leaf"></i>
-                        Commodities
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.schedules.*') ? 'active' : '' }}" 
-                       href="{{ route('admin.schedules.index') }}">
-                        <i class="fas fa-calendar-alt"></i>
-                        Planting Schedules
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.weather.*') ? 'active' : '' }}" 
-                       href="{{ route('admin.weather.index') }}">
-                        <i class="fas fa-cloud-sun"></i>
-                        Weather Data
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.chatbot-faqs.*') ? 'active' : '' }}" 
-                       href="{{ route('admin.chatbot-faqs.index') }}">
-                        <i class="fas fa-robot"></i>
-                        Chatbot FAQs
+                        Komoditas
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" 
                        href="{{ route('admin.reports.index') }}">
-                        <i class="fas fa-chart-bar"></i>
-                        Reports & Analytics
+                        <i class="fas fa-file-alt"></i>
+                        Laporan
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}" 
+                       href="#">
+                        <i class="fas fa-cog"></i>
+                        Pengaturan
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.profile.*') ? 'active' : '' }}" 
+                       href="{{ route('admin.profile.index') }}">
+                        <i class="fas fa-user"></i>
+                        Profil
                     </a>
                 </li>
             </ul>
         </nav>
+        
+        <!-- Logout Button at Bottom -->
+        <div style="position: absolute; bottom: 20px; left: 0; right: 0; padding: 0 0.75rem;">
+            <form action="{{ route('admin.logout') }}" method="POST">
+                @csrf
+                <button type="submit" class="btn btn-logout w-100">
+                    <i class="fas fa-sign-out-alt me-2"></i>
+                    Keluar
+                </button>
+            </form>
+        </div>
     </div>
 
     <!-- Main Content -->

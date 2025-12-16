@@ -4,16 +4,11 @@
 
 @section('content')
 <div class="row mb-4">
-    <div class="col-md-6">
+    <div class="col-md-12">
         <h1 class="h3 mb-0 text-gray-800">
-            <i class="fas fa-exchange-alt me-2"></i>Transaction Management
+            <i class="fas fa-exchange-alt me-2"></i>Transaction Monitoring
         </h1>
-        <p class="text-muted">Monitor and manage all agricultural transactions</p>
-    </div>
-    <div class="col-md-6 text-end">
-        <a href="{{ route('admin.transactions.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i>Add Transaction
-        </a>
+        <p class="text-muted">Monitor all agricultural transactions from users</p>
     </div>
 </div>
 
@@ -177,23 +172,8 @@
                             <td class="text-center">
                                 <a href="{{ route('admin.transactions.index') }}?user={{ $stat['user']->id }}" 
                                    class="btn btn-sm btn-outline-primary" title="View Details">
-                                    <i class="fas fa-eye"></i>
+                                    <i class="fas fa-eye"></i> Details
                                 </a>
-                                @if($latestTransaction)
-                                <a href="{{ route('admin.transactions.edit', $latestTransaction->id) }}" 
-                                   class="btn btn-sm btn-outline-success" title="Edit">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <form action="{{ route('admin.transactions.destroy', $latestTransaction->id) }}" 
-                                      method="POST" class="d-inline"
-                                      onsubmit="return confirm('Are you sure?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
-                                @endif
                             </td>
                         </tr>
                         @endforeach
@@ -204,9 +184,7 @@
             <div class="text-center py-5">
                 <i class="fas fa-exchange-alt fa-3x text-muted mb-3"></i>
                 <p class="text-muted">No transactions found.</p>
-                <a href="{{ route('admin.transactions.create') }}" class="btn btn-primary">
-                    <i class="fas fa-plus me-2"></i>Add First Transaction
-                </a>
+                <p class="text-muted small">Transactions will appear here when users create them in the mobile app.</p>
             </div>
         @endif
     </div>
