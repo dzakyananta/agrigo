@@ -52,17 +52,6 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
-                        <textarea name="description" id="description" 
-                                  class="form-control @error('description') is-invalid @enderror" 
-                                  rows="4" 
-                                  placeholder="Brief description about this commodity...">{{ old('description', $commodity->description) }}</textarea>
-                        @error('description')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="mb-3">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="is_active" id="is_active" 
                                    {{ old('is_active', $commodity->is_active) ? 'checked' : '' }}>

@@ -2,9 +2,29 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Users collection - only authenticated users can read/write their own data
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is owner
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Users collection
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // User can read and write their own data
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
     }
     
     // OTP codes - allow unauthenticated access (untuk forgot password flow)
@@ -17,35 +37,65 @@ service cloud.firestore {
       // - Maximum 3 OTP requests per hour per email
     }
     
-    // Transactions - user can only read/write their own transactions
+    // Transactions collection
     match /transactions/{transactionId} {
-      allow read, write: if request.auth != null && 
-                          resource.data.userId == request.auth.uid;
+      // User can only read their own transactions
+      // Admin can read all transactions
+      allow read: if isAuthenticated() && 
+                     (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // User can create transactions for themselves
+      allow create: if isAuthenticated() && 
+                       request.resource.data.userId == request.auth.uid;
+      
+      // User can update/delete their own transactions
+      // Admin can update/delete all transactions
+      allow update, delete: if isAuthenticated() && 
+                               (resource.data.userId == request.auth.uid || isAdmin());
     }
     
-    // Schedules - user can only read/write their own schedules
+    // Schedules collection
     match /schedules/{scheduleId} {
-      allow read, write: if request.auth != null && 
-                          resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated() && 
+                     (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && 
+                       request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && 
+                               (resource.data.userId == request.auth.uid || isAdmin());
     }
     
-    // Commodities - read-only for all authenticated users
+    // Commodities collection (read-only for all authenticated users)
     match /commodities/{commodityId} {
-      allow read: if request.auth != null;
-      allow write: if false; // Only admin can write (via Firebase Console or Admin SDK)
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
     
-    // Weather data - read-only for all authenticated users
-    match /weather/{weatherId} {
-      allow read: if request.auth != null;
-      allow write: if false; // Only admin can write
+    // Weather data collection (read-only for all authenticated users)
+    match /weather_data/{weatherId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
     
-    // Notifications - user can only read their own notifications
+    // Regions collection (read-only for all authenticated users)
+    match /regions/{regionId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // Notifications collection
     match /notifications/{notificationId} {
-      allow read: if request.auth != null && 
-                   resource.data.userId == request.auth.uid;
-      allow write: if false; // Only server can write notifications
+      allow read: if isAuthenticated() && 
+                     resource.data.userId == request.auth.uid;
+      allow create: if isAdmin();
+      allow update: if isAuthenticated() && 
+                       resource.data.userId == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+    
+    // Chatbot FAQs collection (read-only for all authenticated users)
+    match /chatbot_faqs/{faqId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
   }
 }

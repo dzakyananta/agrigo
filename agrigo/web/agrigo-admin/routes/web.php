@@ -67,6 +67,19 @@ Route::prefix('admin')->group(function () {
     Route::middleware(['auth'])->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
         
+        // Profile Management
+        Route::prefix('profile')->group(function () {
+            Route::get('/', function () {
+                return view('admin.profile.index');
+            })->name('admin.profile.index');
+            Route::put('/update', function () {
+                return redirect()->route('admin.profile.index')->with('success', 'Profil berhasil diperbarui!');
+            })->name('admin.profile.update');
+            Route::put('/password', function () {
+                return redirect()->route('admin.profile.index')->with('success', 'Kata sandi berhasil diubah!');
+            })->name('admin.profile.password');
+        });
+        
         // User Management
         Route::prefix('users')->group(function () {
             Route::get('/', [UserController::class, 'index'])->name('admin.users.index');

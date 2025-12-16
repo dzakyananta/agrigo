@@ -81,7 +81,7 @@ class FirebaseService {
       );
     } catch (e) {
       // Check if it's just Pigeon serialization error (auth actually succeeded)
-      if (e.toString().contains('PigeonUserDetails') || 
+      if (e.toString().contains('PigeonUserDetails') ||
           e.toString().contains('is not a subtype')) {
         // Ignore Pigeon bug - check if user is actually logged in
         await Future.delayed(Duration(milliseconds: 100));
@@ -105,9 +105,9 @@ class FirebaseService {
     String location = '',
   }) async {
     print('🔵 Registration START for: $email');
-    
+
     String? uid;
-    
+
     // Step 1: Create Auth user with Pigeon error suppression
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
@@ -117,7 +117,7 @@ class FirebaseService {
       uid = credential.user!.uid;
     } catch (e) {
       // Check if it's just Pigeon serialization error (registration actually succeeded)
-      if (e.toString().contains('PigeonUserDetails') || 
+      if (e.toString().contains('PigeonUserDetails') ||
           e.toString().contains('is not a subtype')) {
         // Ignore Pigeon bug - get user from currentUser
         await Future.delayed(Duration(milliseconds: 100));
@@ -150,7 +150,7 @@ class FirebaseService {
 
     print('🟢 Firestore saved!');
     print('✅ Registration DONE!');
-    
+
     // Don't return credential - avoid Pigeon bug
   }
 

@@ -1,6 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+// Custom painter for symmetric green curve at top
+class GreenCurvePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    Paint paint = Paint()
+      ..color = const Color(0xFF3AA02F)
+      ..style = PaintingStyle.fill;
+
+    Path path = Path();
+    
+    // Start from top-left
+    path.moveTo(0, 0);
+    // Go to top-right
+    path.lineTo(size.width, 0);
+    // Go down the right side
+    path.lineTo(size.width, size.height * 0.6);
+    
+    // Create symmetric curve from right to left
+    path.quadraticBezierTo(
+      size.width * 0.5,        // Control point X (center)
+      size.height * 1.2,       // Control point Y (below for curve down)
+      0,                       // End point X (left side)
+      size.height * 0.6,       // End point Y (same height as start)
+    );
+    
+    // Close path back to start
+    path.lineTo(0, 0);
+    path.close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
 class CommoditySearchPage extends StatefulWidget {
   const CommoditySearchPage({super.key});
 
@@ -472,35 +508,59 @@ class _CommoditySearchPageState extends State<CommoditySearchPage> {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(56),
         child: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 1,
-          shadowColor: Colors.black12,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.close, color: Colors.black87, size: 24),
             onPressed: () => Navigator.pop(context),
           ),
-          title: const Text(
-            'Pilih Komoditas',
-            style: TextStyle(
-              color: Colors.black87,
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          centerTitle: false,
           systemOverlayStyle: const SystemUiOverlayStyle(
-            statusBarColor: Colors.white,
+            statusBarColor: Colors.transparent,
             statusBarIconBrightness: Brightness.dark,
           ),
         ),
       ),
-      body: Column(
+      extendBodyBehindAppBar: true,
+      body: ListView(
+        padding: EdgeInsets.zero,
         children: [
+          // Green curve header with title (scrollable)
+          SizedBox(
+            height: 180,
+            child: Stack(
+              children: [
+                // Green curve background
+                CustomPaint(
+                  painter: GreenCurvePainter(),
+                  size: const Size(double.infinity, 180),
+                  child: Container(),
+                ),
+                // Title text positioned in green area
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 80,
+                  child: Center(
+                    child: Text(
+                      'Pilih komoditas anda',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           // Search bar
           Container(
             width: double.infinity,
-            color: Colors.white,
-            padding: const EdgeInsets.all(16),
+            color: const Color(0xFFF8F9FA),
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
             child: Container(
               height: 56,
               constraints: const BoxConstraints(maxWidth: 400),
@@ -539,21 +599,25 @@ class _CommoditySearchPageState extends State<CommoditySearchPage> {
           ),
 
           // List content
-          Expanded(
-            child: filteredCommodities.isEmpty
-                ? const Center(
+          filteredCommodities.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: Center(
                     child: Text(
                       'Tidak ada komoditas ditemukan',
                       style: TextStyle(color: Colors.grey, fontSize: 16),
                     ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    itemCount: filteredCommodities.length,
-                    itemBuilder: (context, index) {
+                  ),
+                )
+              : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  itemCount: filteredCommodities.length,
+                  itemBuilder: (context, index) {
                       final commodity = filteredCommodities[index];
                       return Container(
                         width: double.infinity,
@@ -635,7 +699,6 @@ class _CommoditySearchPageState extends State<CommoditySearchPage> {
                       );
                     },
                   ),
-          ),
         ],
       ),
 

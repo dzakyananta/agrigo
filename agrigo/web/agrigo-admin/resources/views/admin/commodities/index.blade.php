@@ -1,101 +1,68 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Commodity Management - Agrigo Admin')
+@section('title', 'Komoditas - Agrigo Admin')
 
 @section('content')
-<div class="row mb-4">
-    <div class="col-md-6">
-        <h1 class="h3 mb-0 text-gray-800">
-            <i class="fas fa-seedling me-2"></i>Commodity Management
-        </h1>
-        <p class="text-muted">Manage agricultural commodities</p>
-    </div>
-    <div class="col-md-6 text-end">
-        <a href="{{ route('admin.commodities.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i>Add Commodity
-        </a>
-    </div>
-</div>
-
-<!-- Statistics -->
-<div class="alert alert-info mb-4">
-    <i class="fas fa-info-circle me-2"></i>
-    Total: <strong>{{ $commodities->total() }}</strong> commodities | 
-    Page {{ $commodities->currentPage() }} of {{ $commodities->lastPage() }}
-</div>
-
-<!-- Commodities Table -->
-<div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">All Commodities</h6>
-    </div>
-    <div class="card-body">
-        @if($commodities->count() > 0)
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Type/Category</th>
-                            <th>Description</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($commodities as $commodity)
-                        <tr>
-                            <td>
-                                <span class="badge bg-secondary">#{{ $commodity->id }}</span>
-                            </td>
-                            <td>
-                                <strong>{{ $commodity->name }}</strong>
-                            </td>
-                            <td>
-                                <span class="badge bg-info">{{ $commodity->type }}</span>
-                            </td>
-                            <td>
-                                <small>{{ Str::limit($commodity->description ?? '-', 50) }}</small>
-                            </td>
-                            <td>
-                                @if($commodity->is_active)
-                                    <span class="badge bg-success">Active</span>
-                                @else
-                                    <span class="badge bg-secondary">Inactive</span>
-                                @endif
-                            </td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="{{ route('admin.commodities.edit', $commodity->id) }}" 
-                                       class="btn btn-sm btn-outline-primary" title="Edit">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <form action="{{ route('admin.commodities.toggle-status', $commodity->id) }}" 
-                                          method="POST" class="d-inline">
-                                        @csrf
-                                        <button type="submit" 
-                                                class="btn btn-sm btn-outline-{{ $commodity->is_active ? 'warning' : 'success' }}" 
-                                                title="{{ $commodity->is_active ? 'Deactivate' : 'Activate' }}">
-                                            <i class="fas fa-{{ $commodity->is_active ? 'pause' : 'play' }}"></i>
-                                        </button>
-                                    </form>
-                                    <form action="{{ route('admin.commodities.destroy', $commodity->id) }}" 
-                                          method="POST" class="d-inline"
-                                          onsubmit="return confirm('Are you sure you want to delete this commodity?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+<div class="card shadow-sm mb-4" style="border: 2px solid #3b82f6; border-radius: 10px;">
+    <div class="card-body p-4">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="mb-0 fw-bold" style="color: #1f2937;">Komoditas</h4>
+        </div>
+        
+        <!-- Search and Add Button -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="input-group">
+                    <span class="input-group-text bg-white" style="border-right: none;">
+                        <i class="fas fa-search text-muted"></i>
+                    </span>
+                    <input type="text" class="form-control" placeholder="Cari komoditas" 
+                           style="border-left: none;" id="searchInput">
+                </div>
             </div>
+            <div class="col-md-4 text-end">
+                <a href="{{ route('admin.commodities.create') }}" 
+                   class="btn btn-success w-100" 
+                   style="background: #22c55e; border: none;">
+                    <i class="fas fa-plus me-2"></i>Tambah komoditas baru
+                </a>
+            </div>
+        </div>
+        
+        <!-- Commodities List -->
+        @if($commodities->count() > 0)
+            @foreach($commodities as $commodity)
+            <div class="card mb-3" style="border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb;">
+                <div class="card-body p-3">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-3">
+                            <strong style="color: #1f2937;">{{ $commodity->name }}</strong>
+                            <span class="badge" style="background: #e0f2fe; color: #0369a1; border-radius: 6px; padding: 4px 12px;">
+                                {{ $commodity->type }}
+                            </span>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="{{ route('admin.commodities.edit', $commodity->id) }}" 
+                               class="btn btn-sm btn-primary" 
+                               style="background: #3b82f6; border: none; border-radius: 6px;">
+                                <i class="fas fa-edit me-1"></i>Edit
+                            </a>
+                            <form action="{{ route('admin.commodities.destroy', $commodity->id) }}" 
+                                  method="POST" class="d-inline"
+                                  onsubmit="return confirm('Apakah Anda yakin ingin menghapus komoditas ini?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-danger" 
+                                        style="background: #ef4444; border: none; border-radius: 6px;">
+                                    <i class="fas fa-trash me-1"></i>Hapus
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endforeach
             
             <!-- Pagination -->
             <div class="mt-3">
@@ -104,12 +71,28 @@
         @else
             <div class="text-center py-5">
                 <i class="fas fa-seedling fa-3x text-muted mb-3"></i>
-                <p class="text-muted">No commodities found.</p>
-                <a href="{{ route('admin.commodities.create') }}" class="btn btn-primary">
-                    <i class="fas fa-plus me-2"></i>Add First Commodity
-                </a>
+                <p class="text-muted">Tidak ada komoditas ditemukan.</p>
             </div>
         @endif
     </div>
 </div>
+
+@push('scripts')
+<script>
+// Search functionality
+document.getElementById('searchInput').addEventListener('keyup', function() {
+    const searchValue = this.value.toLowerCase();
+    const commodityCards = document.querySelectorAll('.card.mb-3');
+    
+    commodityCards.forEach(card => {
+        const commodityName = card.textContent.toLowerCase();
+        if (commodityName.includes(searchValue)) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+});
+</script>
+@endpush
 @endsection

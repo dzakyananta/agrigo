@@ -13,36 +13,25 @@ class CommodityTopWavePainter extends CustomPainter {
 
     Path path = Path();
 
-    // Start from top-left corner
+    // Start from top-left
     path.moveTo(0, 0);
-    // Go along entire top
+    // Go to top-right
     path.lineTo(size.width, 0);
-    // Go down right side
-    path.lineTo(size.width, size.height * 0.3);
+    // Go down the right side
+    path.lineTo(size.width, size.height * 0.6);
 
-    // Create gentle wave curve
+    // Create symmetric curve from right to left
     path.quadraticBezierTo(
-      size.width * 0.8,
-      size.height * 0.5,
-      size.width * 0.6,
-      size.height * 0.55,
+      size.width * 0.5, // Control point X (center)
+      size.height * 1.2, // Control point Y (below for curve down)
+      0, // End point X (left side)
+      size.height * 0.6, // End point Y (same height as start)
     );
 
-    path.quadraticBezierTo(
-      size.width * 0.4,
-      size.height * 0.6,
-      size.width * 0.2,
-      size.height * 0.55,
-    );
-
-    path.quadraticBezierTo(
-      size.width * 0.1,
-      size.height * 0.5,
-      0,
-      size.height * 0.4,
-    );
-
+    // Close path back to start
+    path.lineTo(0, 0);
     path.close();
+
     canvas.drawPath(path, paint);
   }
 
@@ -138,30 +127,27 @@ class _CommoditySelectionPageState extends State<CommoditySelectionPage> {
             // Top wave background with title
             Container(
               width: size.width,
-              height: size.height * 0.35,
+              height: size.height * 0.45,
               child: Stack(
                 children: [
                   CustomPaint(
                     painter: CommodityTopWavePainter(),
-                    size: Size(size.width, size.height * 0.35),
+                    size: Size(size.width, size.height * 0.45),
                   ),
                   SafeArea(
                     child: Container(
                       width: size.width,
-                      padding: const EdgeInsets.symmetric(horizontal: 30),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SizedBox(height: size.height * 0.06),
-                          Container(
-                            width: size.width - 48,
-                            child: const Text(
+                          SizedBox(height: size.height * 0.10),
+                          Center(
+                            child: Text(
                               'Pilih komoditas anda',
                               style: TextStyle(
-                                fontSize: 26,
+                                fontSize: 24,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
-                                height: 1.2,
+                                letterSpacing: 0.5,
                               ),
                             ),
                           ),

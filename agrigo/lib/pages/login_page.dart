@@ -6,89 +6,42 @@ import 'dashboard_page.dart';
 import 'register_page.dart';
 import 'forgot_password_page.dart';
 
-// Custom painter for top large circle with P-wave
-class TopWavePainter extends CustomPainter {
+// Custom painter for top-left green circle
+class TopLeftCirclePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     Paint paint = Paint()
       ..color = const Color(0xFF3AA02F)
       ..style = PaintingStyle.fill;
 
-    Path path = Path();
-
-    // Start from top-left corner
-    path.moveTo(0, 0);
-    // Go along entire top
-    path.lineTo(size.width, 0);
-    // Go down right side to start wave
-    path.lineTo(size.width, size.height * 0.3);
-
-    // Create more natural wave with multiple curves
-    // First curve down and left
-    path.quadraticBezierTo(
-      size.width * 0.85,
-      size.height * 0.5, // Control point
-      size.width * 0.7,
-      size.height * 0.55, // End point
+    // Draw large circle positioned at top-left corner
+    // Circle center is outside viewport to create partial circle effect
+    canvas.drawCircle(
+      Offset(-size.width * 0.2, size.height * 0.25), // Position at top-left
+      size.width * 0.65, // Large radius to cover "Login" text area
+      paint,
     );
-
-    // Second curve creating the wave bulge
-    path.quadraticBezierTo(
-      size.width * 0.5,
-      size.height * 0.65, // Control point for bulge
-      size.width * 0.3,
-      size.height * 0.6, // Mid point
-    );
-
-    // Third curve back to left side
-    path.quadraticBezierTo(
-      size.width * 0.15,
-      size.height * 0.55, // Control point
-      0,
-      size.height * 0.4, // End at left edge
-    );
-
-    // Close back to start
-    path.close();
-    canvas.drawPath(path, paint);
   }
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
 
-// Custom painter for bottom large circle
-class BottomWavePainter extends CustomPainter {
+// Custom painter for bottom-right green circle
+class BottomRightCirclePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     Paint paint = Paint()
       ..color = const Color(0xFF2E8B25)
       ..style = PaintingStyle.fill;
 
-    Path path = Path();
-
-    // Start from bottom-left
-    path.moveTo(0, size.height);
-    // Create gentle wave curve
-    path.quadraticBezierTo(
-      size.width * 0.3,
-      size.height * 0.6, // Control point for curve up
-      size.width * 0.6,
-      size.height * 0.7, // Mid point
+    // Draw large circle positioned at bottom-right corner
+    // Circle center is outside viewport to create partial circle effect
+    canvas.drawCircle(
+      Offset(size.width * 1.2, size.height * 0.75), // Position at bottom-right
+      size.width * 0.65, // Large radius matching top circle
+      paint,
     );
-
-    path.quadraticBezierTo(
-      size.width * 0.8,
-      size.height * 0.75, // Control point
-      size.width,
-      size.height * 0.85, // End at right edge
-    );
-
-    // Complete the shape
-    path.lineTo(size.width, size.height);
-    path.close();
-
-    canvas.drawPath(path, paint);
   }
 
   @override
@@ -504,33 +457,33 @@ class _LoginPageState extends State<LoginPage> {
           height: isDesktop ? 800 : double.infinity,
           child: Stack(
             children: [
-              // Top wave background
+              // Top-left green circle background
               Positioned(
                 top: 0,
                 left: 0,
                 right: 0,
                 child: SizedBox(
-                  height: isDesktop ? 280 : size.height * 0.35,
+                  height: isDesktop ? 300 : size.height * 0.4,
                   child: CustomPaint(
-                    painter: TopWavePainter(),
+                    painter: TopLeftCirclePainter(),
                     size: Size(
                       size.width,
-                      isDesktop ? 280 : size.height * 0.35,
+                      isDesktop ? 300 : size.height * 0.4,
                     ),
                   ),
                 ),
               ),
 
-              // Bottom wave background
+              // Bottom-right green circle background
               Positioned(
                 bottom: 0,
                 left: 0,
                 right: 0,
                 child: SizedBox(
-                  height: isDesktop ? 150 : size.height * 0.2,
+                  height: isDesktop ? 200 : size.height * 0.3,
                   child: CustomPaint(
-                    painter: BottomWavePainter(),
-                    size: Size(size.width, isDesktop ? 150 : size.height * 0.2),
+                    painter: BottomRightCirclePainter(),
+                    size: Size(size.width, isDesktop ? 200 : size.height * 0.3),
                   ),
                 ),
               ),
@@ -543,22 +496,23 @@ class _LoginPageState extends State<LoginPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(height: isDesktop ? 80 : size.height * 0.12),
+                        SizedBox(height: isDesktop ? 60 : size.height * 0.08),
 
-                        // Login title positioned in green area
+                        // Login title positioned in green circle area
                         Padding(
-                          padding: const EdgeInsets.only(left: 30),
+                          padding: const EdgeInsets.only(left: 10),
                           child: const Text(
                             'Login',
                             style: TextStyle(
-                              fontSize: 36,
+                              fontSize: 40,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
+                              letterSpacing: 1.2,
                             ),
                           ),
                         ),
 
-                        SizedBox(height: isDesktop ? 120 : size.height * 0.18),
+                        SizedBox(height: isDesktop ? 100 : size.height * 0.15),
 
                         // Email field
                         Container(
@@ -835,61 +789,6 @@ class _LoginPageState extends State<LoginPage> {
                         ),
 
                         const SizedBox(height: 30),
-
-                        // Kredensial info
-                        Container(
-                          margin: const EdgeInsets.symmetric(vertical: 10),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Akun untuk Testing:',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                  color: Colors.grey.shade700,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              _buildCredentialItem(
-                                'Admin',
-                                'admin@agrigo.com',
-                                'admin123',
-                              ),
-                              _buildCredentialItem(
-                                'Admin HP',
-                                '08123456789',
-                                'admin123',
-                              ),
-                              _buildCredentialItem(
-                                'Budi',
-                                'budi@farmer.com',
-                                'password123',
-                              ),
-                              _buildCredentialItem(
-                                'Budi HP',
-                                '08234567890',
-                                'password123',
-                              ),
-                              _buildCredentialItem(
-                                'Testing',
-                                'test@agrigo.com',
-                                'test123',
-                              ),
-                              _buildCredentialItem(
-                                'Test HP',
-                                '08987654321',
-                                'test123',
-                              ),
-                            ],
-                          ),
-                        ),
 
                         // Register link
                         Row(

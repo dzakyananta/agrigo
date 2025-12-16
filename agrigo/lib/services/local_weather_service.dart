@@ -29,23 +29,42 @@ class LocalWeatherService {
       throw Exception('Location permissions are permanently denied');
     }
 
+    // Get location with timeout and better settings
     return await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
+      desiredAccuracy: LocationAccuracy.medium,
+      timeLimit: Duration(seconds: 15),
     );
   }
 
   // Get location name from coordinates
   static Future<String> getLocationName(double lat, double lon) async {
     try {
-      List<Placemark> placemarks = await placemarkFromCoordinates(lat, lon);
+      List<Placemark> placemarks =
+          await placemarkFromCoordinates(lat, lon).timeout(
+        Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('Geocoding timeout');
+        },
+      );
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks[0];
-        return '${place.locality}, ${place.administrativeArea}';
+        // Return locality atau subAdministrativeArea jika locality kosong
+        String city = place.locality ?? place.subAdministrativeArea ?? '';
+        String state = place.administrativeArea ?? '';
+
+        if (city.isNotEmpty && state.isNotEmpty) {
+          return '$city, $state';
+        } else if (city.isNotEmpty) {
+          return city;
+        } else if (state.isNotEmpty) {
+          return state;
+        }
       }
     } catch (e) {
       print('Error getting location name: $e');
     }
-    return 'Unknown Location';
+    // Return coordinates as fallback
+    return 'Lat: ${lat.toStringAsFixed(2)}, Lon: ${lon.toStringAsFixed(2)}';
   }
 
   // Get weather by coordinates using Open-Meteo (free, no API key needed)

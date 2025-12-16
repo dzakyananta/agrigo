@@ -73,23 +73,19 @@ class _FinancePageState extends State<FinancePage> {
     if (selectedSchedule != null) {
       // Filter HANYA berdasarkan komoditas (tidak filter tanggal)
       // Ini agar semua transaksi cabai muncul meski diluar periode schedule
-      final scheduleKomoditas = selectedSchedule!.komoditas
-          .toLowerCase()
-          .trim();
+      final scheduleKomoditas =
+          selectedSchedule!.komoditas.toLowerCase().trim();
 
       periodTransactions = transactions.where((t) {
         // Check if matching commodity
-        final transactionKomoditas = (t['komoditas']?.toString() ?? '')
-            .toLowerCase()
-            .trim();
-        final transactionTarget = (t['target']?.toString() ?? '')
-            .toLowerCase()
-            .trim();
+        final transactionKomoditas =
+            (t['komoditas']?.toString() ?? '').toLowerCase().trim();
+        final transactionTarget =
+            (t['target']?.toString() ?? '').toLowerCase().trim();
 
         // Match berdasarkan komoditas saja
         // Lebih fleksibel: exact match atau contains
-        final isMatchingCommodity =
-            transactionKomoditas == scheduleKomoditas ||
+        final isMatchingCommodity = transactionKomoditas == scheduleKomoditas ||
             transactionTarget == scheduleKomoditas ||
             transactionKomoditas.contains(scheduleKomoditas) ||
             transactionTarget.contains(scheduleKomoditas) ||
@@ -113,12 +109,10 @@ class _FinancePageState extends State<FinancePage> {
 
     print('📊 Period transactions: ${periodTransactions.length}');
 
-    final incomeTransactions = periodTransactions
-        .where((t) => t['type'] == 'income')
-        .toList();
-    final expenseTransactions = periodTransactions
-        .where((t) => t['type'] == 'expense')
-        .toList();
+    final incomeTransactions =
+        periodTransactions.where((t) => t['type'] == 'income').toList();
+    final expenseTransactions =
+        periodTransactions.where((t) => t['type'] == 'expense').toList();
 
     print('📊 Income transactions: ${incomeTransactions.length}');
     print('📊 Expense transactions: ${expenseTransactions.length}');
@@ -144,15 +138,13 @@ class _FinancePageState extends State<FinancePage> {
 
     for (var transaction in incomeTransactions) {
       final komoditas = transaction['komoditas'] ?? 'Lainnya';
-      incomeByCategory[komoditas] =
-          (incomeByCategory[komoditas] ?? 0) +
+      incomeByCategory[komoditas] = (incomeByCategory[komoditas] ?? 0) +
           _parseAmount(transaction['totalHarga']);
     }
 
     for (var transaction in expenseTransactions) {
       final target = transaction['target'] ?? 'Lainnya';
-      expenseByCategory[target] =
-          (expenseByCategory[target] ?? 0) +
+      expenseByCategory[target] = (expenseByCategory[target] ?? 0) +
           _parseAmount(transaction['totalHarga']);
     }
 
@@ -844,21 +836,17 @@ class _FinancePageState extends State<FinancePage> {
 
     if (selectedSchedule != null) {
       // Filter HANYA berdasarkan komoditas (tidak filter tanggal)
-      final scheduleKomoditas = selectedSchedule!.komoditas
-          .toLowerCase()
-          .trim();
+      final scheduleKomoditas =
+          selectedSchedule!.komoditas.toLowerCase().trim();
 
       filteredTransactions = transactions.where((t) {
         // Check commodity match
-        final transactionKomoditas = (t['komoditas']?.toString() ?? '')
-            .toLowerCase()
-            .trim();
-        final transactionTarget = (t['target']?.toString() ?? '')
-            .toLowerCase()
-            .trim();
+        final transactionKomoditas =
+            (t['komoditas']?.toString() ?? '').toLowerCase().trim();
+        final transactionTarget =
+            (t['target']?.toString() ?? '').toLowerCase().trim();
 
-        final isMatchingCommodity =
-            transactionKomoditas == scheduleKomoditas ||
+        final isMatchingCommodity = transactionKomoditas == scheduleKomoditas ||
             transactionTarget == scheduleKomoditas ||
             transactionKomoditas.contains(scheduleKomoditas) ||
             transactionTarget.contains(scheduleKomoditas) ||
@@ -1010,8 +998,8 @@ class _FinancePageState extends State<FinancePage> {
         final kuantitasValue = (kuantitas is String)
             ? double.tryParse(kuantitas.replaceAll(RegExp(r'[^\d.,]'), '')) ?? 0
             : (kuantitas is num)
-            ? kuantitas.toDouble()
-            : 0;
+                ? kuantitas.toDouble()
+                : 0;
 
         if (hargaValue > 0 && kuantitasValue > 0) {
           amount = (hargaValue * kuantitasValue).toDouble();

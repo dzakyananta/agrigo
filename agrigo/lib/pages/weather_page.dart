@@ -70,8 +70,15 @@ class _WeatherPageState extends State<WeatherPage> {
         return;
       }
 
-      // Permission granted dan service enabled, load weather data
-      _loadInitialWeatherData();
+      // Permission granted dan service enabled, ambil lokasi GPS aktual
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        print('Permission granted, getting current location...');
+        await _getCurrentLocationWeather();
+      } else {
+        // Fallback jika permission status lain
+        _loadInitialWeatherData();
+      }
     } catch (e) {
       print('Error checking location permission: $e');
       _loadInitialWeatherData();
@@ -331,18 +338,31 @@ class _WeatherPageState extends State<WeatherPage> {
     });
 
     try {
-      // Coba ambil lokasi saat ini
-      Position position = await LocalWeatherService.getCurrentLocation();
+      print('Getting current location...');
+      // Coba ambil lokasi saat ini dengan timeout
+      Position position =
+          await LocalWeatherService.getCurrentLocation().timeout(
+        Duration(seconds: 20),
+        onTimeout: () {
+          throw Exception('Location timeout');
+        },
+      );
+      print('Got position: ${position.latitude}, ${position.longitude}');
+
+      // Get location name
       String locationName = await LocalWeatherService.getLocationName(
         position.latitude,
         position.longitude,
       );
+      print('Got location name: $locationName');
 
+      // Get weather forecast
       List<Map<String, dynamic>> forecast =
           await LocalWeatherService.getWeatherForecast(
-            position.latitude,
-            position.longitude,
-          );
+        position.latitude,
+        position.longitude,
+      );
+      print('Got forecast: ${forecast.length} items');
 
       // SINKRONISASI: Gunakan forecast[0] untuk currentWeather
       Map<String, dynamic> weather;
@@ -364,23 +384,28 @@ class _WeatherPageState extends State<WeatherPage> {
         throw Exception('No forecast data available');
       }
 
-      setState(() {
-        selectedLocation = locationName;
-        currentWeather = weather;
-        hourlyForecast = forecast.take(24).toList(); // 24 jam ke depan
-        weeklyForecast = _generateWeeklyForecastFromAPI(forecast);
-        isLoading = false;
-        errorMessage = null;
-      });
+      if (mounted) {
+        setState(() {
+          selectedLocation = locationName;
+          currentWeather = weather;
+          hourlyForecast = forecast.take(24).toList(); // 24 jam ke depan
+          weeklyForecast = _generateWeeklyForecastFromAPI(forecast);
+          isLoading = false;
+          errorMessage = null;
+        });
+        print('Weather data loaded successfully');
+      }
     } catch (e) {
       // Fallback ke data cuaca lokal jika semua gagal
       print('Error getting location and weather: $e');
-      setState(() {
-        errorMessage =
-            'Tidak dapat mengakses lokasi. Menggunakan data Jakarta.';
-      });
-      await Future.delayed(Duration(milliseconds: 300));
-      _loadFallbackWeatherData('Jakarta');
+      if (mounted) {
+        setState(() {
+          errorMessage =
+              'Tidak dapat mengakses lokasi. Menggunakan data Jakarta.';
+        });
+        await Future.delayed(Duration(milliseconds: 300));
+        _loadFallbackWeatherData('Jakarta');
+      }
     }
   }
 
@@ -1058,9 +1083,8 @@ class _WeatherPageState extends State<WeatherPage> {
         'main': mostCommonCondition,
         'description': _capitalizeFirst(description),
         'humidity': hourlyList.isNotEmpty ? hourlyList.first['humidity'] : 65,
-        'windSpeed': hourlyList.isNotEmpty
-            ? hourlyList.first['windSpeed']
-            : 2.5,
+        'windSpeed':
+            hourlyList.isNotEmpty ? hourlyList.first['windSpeed'] : 2.5,
       });
 
       dayIndex++;
@@ -1215,103 +1239,105 @@ class _WeatherPageState extends State<WeatherPage> {
                                 ],
                               )
                             : errorMessage != null
-                            ? Column(
-                                children: [
-                                  Icon(
-                                    Icons.error,
-                                    color: Colors.white,
-                                    size: 48,
-                                  ),
-                                  SizedBox(height: 16),
-                                  Text(
-                                    errorMessage!,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : currentWeather != null
-                            ? Column(
-                                children: [
-                                  // Weather Icon - Dynamic based on current weather
-                                  Container(
-                                    width: 100,
-                                    height: 100,
-                                    decoration: BoxDecoration(
-                                      gradient: RadialGradient(
-                                        colors: [
-                                          _getWeatherIconColor(
-                                            currentWeather!['main'],
-                                          ).withOpacity(0.8),
-                                          _getWeatherIconColor(
-                                            currentWeather!['main'],
+                                ? Column(
+                                    children: [
+                                      Icon(
+                                        Icons.error,
+                                        color: Colors.white,
+                                        size: 48,
+                                      ),
+                                      SizedBox(height: 16),
+                                      Text(
+                                        errorMessage!,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : currentWeather != null
+                                    ? Column(
+                                        children: [
+                                          // Weather Icon - Dynamic based on current weather
+                                          Container(
+                                            width: 100,
+                                            height: 100,
+                                            decoration: BoxDecoration(
+                                              gradient: RadialGradient(
+                                                colors: [
+                                                  _getWeatherIconColor(
+                                                    currentWeather!['main'],
+                                                  ).withOpacity(0.8),
+                                                  _getWeatherIconColor(
+                                                    currentWeather!['main'],
+                                                  ),
+                                                ],
+                                              ),
+                                              shape: BoxShape.circle,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: _getWeatherIconColor(
+                                                    currentWeather!['main'],
+                                                  ).withOpacity(0.4),
+                                                  blurRadius: 15,
+                                                  spreadRadius: 5,
+                                                ),
+                                              ],
+                                            ),
+                                            child: Icon(
+                                              _getWeatherIcon(
+                                                  currentWeather!['main']),
+                                              size: 50,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+
+                                          SizedBox(height: 16),
+
+                                          // Temperature - Lebih besar sesuai gambar
+                                          Text(
+                                            '${currentWeather!['temperature'].round()}°',
+                                            style: TextStyle(
+                                              fontSize: 72,
+                                              fontWeight: FontWeight.w200,
+                                              color: Colors.white,
+                                              height: 1.0,
+                                            ),
+                                          ),
+
+                                          SizedBox(height: 8),
+
+                                          // Weather Condition
+                                          Text(
+                                            _capitalizeFirst(
+                                              currentWeather!['description'],
+                                            ),
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+
+                                          SizedBox(height: 4),
+
+                                          // Range Temperature seperti di gambar
+                                          FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Text(
+                                              'Tertinggi: ${(currentWeather!['temperature'] + 3).round()}° • Terendah: ${(currentWeather!['temperature'] - 5).round()}°',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.white
+                                                    .withOpacity(0.85),
+                                              ),
+                                            ),
                                           ),
                                         ],
-                                      ),
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: _getWeatherIconColor(
-                                            currentWeather!['main'],
-                                          ).withOpacity(0.4),
-                                          blurRadius: 15,
-                                          spreadRadius: 5,
-                                        ),
-                                      ],
-                                    ),
-                                    child: Icon(
-                                      _getWeatherIcon(currentWeather!['main']),
-                                      size: 50,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-
-                                  SizedBox(height: 16),
-
-                                  // Temperature - Lebih besar sesuai gambar
-                                  Text(
-                                    '${currentWeather!['temperature'].round()}°',
-                                    style: TextStyle(
-                                      fontSize: 72,
-                                      fontWeight: FontWeight.w200,
-                                      color: Colors.white,
-                                      height: 1.0,
-                                    ),
-                                  ),
-
-                                  SizedBox(height: 8),
-
-                                  // Weather Condition
-                                  Text(
-                                    _capitalizeFirst(
-                                      currentWeather!['description'],
-                                    ),
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                                  ),
-
-                                  SizedBox(height: 4),
-
-                                  // Range Temperature seperti di gambar
-                                  FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: Text(
-                                      'Tertinggi: ${(currentWeather!['temperature'] + 3).round()}° • Terendah: ${(currentWeather!['temperature'] - 5).round()}°',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.white.withOpacity(0.85),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : SizedBox(),
+                                      )
+                                    : SizedBox(),
                       ),
 
                       SizedBox(height: 16),
@@ -1463,9 +1489,8 @@ class _WeatherPageState extends State<WeatherPage> {
                                       height: 120,
                                       child: ListView.builder(
                                         scrollDirection: Axis.horizontal,
-                                        itemCount: hourlyForecast
-                                            .take(24)
-                                            .length,
+                                        itemCount:
+                                            hourlyForecast.take(24).length,
                                         itemBuilder: (context, index) {
                                           final forecast =
                                               hourlyForecast[index];
@@ -1473,8 +1498,7 @@ class _WeatherPageState extends State<WeatherPage> {
                                           return Container(
                                             width: 80,
                                             margin: EdgeInsets.only(
-                                              right:
-                                                  index <
+                                              right: index <
                                                       hourlyForecast.length - 1
                                                   ? 12
                                                   : 0,
@@ -1532,12 +1556,12 @@ class _WeatherPageState extends State<WeatherPage> {
                                                   decoration: BoxDecoration(
                                                     color: isNow
                                                         ? Colors.white
-                                                              .withOpacity(0.2)
+                                                            .withOpacity(0.2)
                                                         : Colors.white,
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                          8,
-                                                        ),
+                                                      8,
+                                                    ),
                                                   ),
                                                   child: Icon(
                                                     _getWeatherIcon(
@@ -1567,7 +1591,7 @@ class _WeatherPageState extends State<WeatherPage> {
                                                     fontSize: 10,
                                                     color: isNow
                                                         ? Colors.white
-                                                              .withOpacity(0.8)
+                                                            .withOpacity(0.8)
                                                         : Colors.black54,
                                                   ),
                                                 ),
