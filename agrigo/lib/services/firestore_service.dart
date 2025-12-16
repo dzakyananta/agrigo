@@ -226,6 +226,40 @@ class FirestoreService {
     }
   }
 
+  /// Stream transaction summary (real-time)
+  Stream<Map<String, double>> streamTransactionSummary() {
+    if (currentUserId == null) {
+      return Stream.value({'income': 0, 'expense': 0, 'balance': 0});
+    }
+
+    return _db
+        .collection('transactions')
+        .where('userId', isEqualTo: currentUserId)
+        .snapshots()
+        .map((snapshot) {
+      double income = 0;
+      double expense = 0;
+
+      for (var doc in snapshot.docs) {
+        var data = doc.data();
+        double amount = (data['amount'] ?? 0).toDouble();
+        String type = data['type'] ?? 'expense';
+
+        if (type == 'income') {
+          income += amount;
+        } else {
+          expense += amount;
+        }
+      }
+
+      return {
+        'income': income,
+        'expense': expense,
+        'balance': income - expense,
+      };
+    });
+  }
+
   // ==================== SCHEDULE OPERATIONS ====================
 
   /// Add new schedule

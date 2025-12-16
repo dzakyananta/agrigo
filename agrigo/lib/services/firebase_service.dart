@@ -155,11 +155,16 @@ class FirebaseService {
   }
 
   // ---------------- GOOGLE SIGN IN ----------------
-  static Future<UserCredential?> signInWithGoogle() async {
+  static Future<void> signInWithGoogle() async {
     try {
+      print('🔵 Starting Google Sign-In...');
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null;
+      if (googleUser == null) {
+        print('❌ Google Sign-In cancelled by user');
+        return;
+      }
 
+      print('🟢 Got Google account: ${googleUser.email}');
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
@@ -168,13 +173,19 @@ class FirebaseService {
         idToken: googleAuth.idToken,
       );
 
-      final userCredential = await _auth.signInWithCredential(credential);
+      print('🔵 Signing in with Firebase...');
+      await _auth.signInWithCredential(credential);
+      
+      // Wait a bit for auth to settle
+      await Future.delayed(Duration(milliseconds: 500));
 
-      if (userCredential.user != null) {
-        final user = userCredential.user!;
+      final user = _auth.currentUser;
+      if (user != null) {
+        print('🟢 Firebase auth successful: ${user.uid}');
         final userDoc = await getUser(user.uid);
 
         if (!userDoc.exists) {
+          print('🔵 Creating Firestore user document...');
           await createUser(
             userId: user.uid,
             name: user.displayName ?? 'Google User',
@@ -182,37 +193,89 @@ class FirebaseService {
             phone: '',
             region: '',
           );
+          print('✅ Firestore user created!');
+        } else {
+          print('✅ User already exists in Firestore');
         }
       }
-
-      return userCredential;
     } catch (e) {
-      print('Google sign in error: $e');
-      return null;
+      print('🔴 Google sign in error: $e');
+      rethrow;
     }
   }
 
   // ---------------- FACEBOOK SIGN IN ----------------
-  static Future<UserCredential?> signInWithFacebook() async {
+  static Future<void> signInWithFacebook() async {
     try {
+      print('🔵 Starting Facebook Sign-In...');
+      print('🔵 Requesting Facebook permissions...');
+      
       final LoginResult result = await FacebookAuth.instance.login(
         permissions: ['email', 'public_profile'],
-        loginBehavior: LoginBehavior.webOnly,
+        loginBehavior: LoginBehavior.nativeWithFallback, // Try native app first, fallback to web
       );
 
+      print('🔵 Facebook login result status: ${result.status}');
+      print('🔵 Facebook login message: ${result.message}');
+
       if (result.status == LoginStatus.success) {
+        print('🟢 Facebook login successful!');
+        print('🔵 Access Token: ${result.accessToken?.token.substring(0, 20)}...');
+        
+        print('🔵 Fetching Facebook user data...');
         final userData = await FacebookAuth.instance.getUserData();
+        print('🟢 Facebook user data retrieved:');
+        print('   - Name: ${userData['name']}');
+        print('   - Email: ${userData['email']}');
+        print('   - ID: ${userData['id']}');
 
         final OAuthCredential credential =
             FacebookAuthProvider.credential(result.accessToken!.token);
 
-        final userCredential = await _auth.signInWithCredential(credential);
+        print('🔵 Signing in with Firebase using Facebook credential...');
+        
+        try {
+          await _auth.signInWithCredential(credential);
+        } catch (e) {
+          // Check if error is due to email already in use
+          if (e.toString().contains('account-exists-with-different-credential') ||
+              e.toString().contains('email-already-in-use')) {
+            print('⚠️ Email already exists with different provider');
+            print('🔵 Attempting to link Facebook with existing account...');
+            
+            // Get the email from Facebook data
+            final email = userData['email'] as String?;
+            if (email != null && email.isNotEmpty) {
+              // Fetch sign-in methods for this email
+              final methods = await _auth.fetchSignInMethodsForEmail(email);
+              print('🔵 Existing sign-in methods: $methods');
+              
+              if (methods.contains('google.com')) {
+                print('⚠️ Account exists with Google. User needs to link accounts.');
+                throw Exception(
+                  'Email $email sudah terdaftar dengan Google. '
+                  'Silakan login dengan Google terlebih dahulu, '
+                  'lalu link akun Facebook dari Profile Settings.'
+                );
+              }
+            }
+            
+            rethrow;
+          }
+          rethrow;
+        }
+        
+        // Wait a bit for auth to settle
+        await Future.delayed(Duration(milliseconds: 500));
 
-        if (userCredential.user != null) {
-          final user = userCredential.user!;
+        final user = _auth.currentUser;
+        if (user != null) {
+          print('🟢 Firebase auth successful: ${user.uid}');
+          print('🔵 Checking if user exists in Firestore...');
           final userDoc = await getUser(user.uid);
 
           if (!userDoc.exists) {
+            print('🔵 Creating Firestore user document...');
             await createUser(
               userId: user.uid,
               name: userData['name'] ?? 'Facebook User',
@@ -220,16 +283,25 @@ class FirebaseService {
               phone: '',
               region: '',
             );
+            print('✅ Firestore user created!');
+          } else {
+            print('✅ User already exists in Firestore');
           }
         }
-
-        return userCredential;
+      } else if (result.status == LoginStatus.cancelled) {
+        print('⚠️ Facebook login cancelled by user');
+        throw Exception('Login dibatalkan');
+      } else if (result.status == LoginStatus.failed) {
+        print('🔴 Facebook login failed: ${result.message}');
+        throw Exception('Facebook login gagal: ${result.message}');
+      } else {
+        print('❌ Facebook login status unknown: ${result.status}');
+        throw Exception('Status login tidak diketahui');
       }
-
-      return null;
     } catch (e) {
-      print('Facebook sign in error: $e');
-      return null;
+      print('🔴 Facebook sign in error: $e');
+      print('🔴 Error type: ${e.runtimeType}');
+      rethrow;
     }
   }
 

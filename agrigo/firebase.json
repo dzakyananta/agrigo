@@ -1,1 +1,24 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"agrigo-bddde","appId":"1:109126013158:android:fe919807d20d753ed56b27","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"agrigo-bddde","configurations":{"android":"1:109126013158:android:fe919807d20d753ed56b27"}}}}}}
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "agrigo-bddde",
+          "appId": "1:109126013158:android:fe919807d20d753ed56b27",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "agrigo-bddde",
+          "configurations": {
+            "android": "1:109126013158:android:fe919807d20d753ed56b27"
+          }
+        }
+      }
+    }
+  }
+}

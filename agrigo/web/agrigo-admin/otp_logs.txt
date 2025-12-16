@@ -1,0 +1,8 @@
+[2025-12-15 09:23:36] ERROR: SMTP Error: Could not authenticate.
+[2025-12-15 09:24:06] ERROR: SMTP Error: Could not authenticate.
+[2025-12-15 09:37:33] OTP 12345 → antacursor@gmail.com
+[2025-12-15 09:38:00] OTP 12345 → antacursor@gmail.com
+[2025-12-15 09:40:10] OTP 12345 → antacursor@gmail.com
+[2025-12-15 09:45:28] OTP 47010 → antacursor@gmail.com
+[2025-12-15 09:48:29] OTP 22641 → antacursor@gmail.com
+[2025-12-15 09:52:02] OTP 32064 → alvindenobahari@gmail.com

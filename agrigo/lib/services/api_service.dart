@@ -3,7 +3,18 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.1.14:8000/api';
+  // Multiple base URL options - pilih yang sesuai:
+  // 1. Localhost (untuk emulator Android)
+  static const String baseUrlLocalhost = 'http://10.0.2.2:8000/api';
+  
+  // 2. Network IP (untuk physical device di WiFi yang sama)
+  static const String baseUrlNetwork = 'http://192.168.1.14:8000/api';
+  
+  // 3. Ngrok (untuk testing di device manapun)
+  static const String baseUrlNgrok = 'https://YOUR_NGROK_URL/api';
+  
+  // ACTIVE BASE URL - Ganti sesuai kebutuhan
+  static const String baseUrl = baseUrlLocalhost; // Default: emulator
   
   // ============= TOKEN MANAGEMENT =============
   

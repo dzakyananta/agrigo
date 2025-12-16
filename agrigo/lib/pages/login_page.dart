@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // ADD THIS IMPORT
 import '../services/firebase_service.dart';
+import '../screens/api_test_screen.dart';
 import 'dashboard_page.dart';
 import 'register_page.dart';
 import 'forgot_password_page.dart';
@@ -232,49 +233,205 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  // Google Login - DISABLED temporarily due to Pigeon bug
+  // Google Login - FIXED with Pigeon error suppression
   Future<void> _handleGoogleLogin() async {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Google Login'),
-        content: const Text(
-          'Login Google sedang dalam perbaikan.\n\n'
-          'Silakan gunakan:\n'
-          '• Email & Password\n'
-          '• Daftar akun baru jika belum punya'
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+    setState(() => _isLoading = true);
+
+    try {
+      print('🔵 Starting Google Sign-In...');
+      
+      // Call Google Sign-In with error suppression
+      try {
+        await FirebaseService.signInWithGoogle();
+      } catch (e) {
+        // Check if it's just Pigeon serialization error (auth actually succeeded)
+        if (e.toString().contains('PigeonUserDetails') || 
+            e.toString().contains('is not a subtype')) {
+          await Future.delayed(Duration(milliseconds: 100));
+          if (FirebaseService.currentUser == null) {
+            // If no user after error, it's real error
+            rethrow;
+          }
+          print('✅ Google Sign-In succeeded despite Pigeon error');
+        } else {
+          // Real error, rethrow
+          rethrow;
+        }
+      }
+
+      final currentUserId = FirebaseService.userId;
+      final currentUser = FirebaseService.currentUser;
+      
+      if (currentUserId != null && currentUser != null && mounted) {
+        print('🔵 Fetching user data from Firestore...');
+        print('🔵 User ID: $currentUserId');
+        print('🔵 User Email: ${currentUser.email}');
+        print('🔵 User DisplayName: ${currentUser.displayName}');
+        
+        final userDoc = await FirebaseService.getUser(currentUserId);
+        print('🔵 userDoc.exists: ${userDoc.exists}');
+        
+        String userName = 'User';
+
+        if (userDoc.exists) {
+          final userData = userDoc.data() as Map<String, dynamic>;
+          userName = userData['name'] ?? 'User';
+          print('🟢 User data found in Firestore:');
+          print('   - name: ${userData['name']}');
+          print('   - email: ${userData['email']}');
+          print('   - phone: ${userData['phone']}');
+          print('   - region: ${userData['region']}');
+        } else {
+          // User document doesn't exist, create it NOW
+          print('🔵 User document NOT EXISTS in Firestore, creating NOW...');
+          try {
+            await FirebaseService.createUser(
+              userId: currentUserId,
+              name: currentUser.displayName ?? 'Google User',
+              email: currentUser.email ?? '',
+              phone: '',
+              region: '',
+            );
+            userName = currentUser.displayName ?? 'Google User';
+            print('✅ User document created successfully!');
+            print('   - Created with name: $userName');
+            print('   - Created with email: ${currentUser.email}');
+          } catch (createError) {
+            print('🔴 ERROR creating user document: $createError');
+            rethrow;
+          }
+        }
+
+        print('🔵 Navigating to Dashboard...');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DashboardPage(userName: userName),
           ),
-        ],
-      ),
-    );
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Login Google berhasil! Selamat datang $userName'),
+            backgroundColor: const Color(0xFF2E8B25),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('🔴 Google Sign-In error: $e');
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Google Login Gagal'),
+            content: Text('Terjadi kesalahan saat login dengan Google:\n\n$e'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
-  // Facebook Login - DISABLED temporarily due to Pigeon bug
+  // Facebook Login - FIXED with Pigeon error suppression
   Future<void> _handleFacebookLogin() async {
-    // Show info dialog instead of trying to login
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Facebook Login'),
-        content: const Text(
-          'Login Facebook sedang dalam perbaikan.\n\n'
-          'Silakan gunakan:\n'
-          '• Email & Password\n'
-          '• Google Sign-In'
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+    setState(() => _isLoading = true);
+
+    try {
+      print('🔵 Starting Facebook Sign-In...');
+      
+      // Call Facebook Sign-In with error suppression
+      try {
+        await FirebaseService.signInWithFacebook();
+      } catch (e) {
+        // Check if it's just Pigeon serialization error (auth actually succeeded)
+        if (e.toString().contains('PigeonUserDetails') || 
+            e.toString().contains('is not a subtype')) {
+          await Future.delayed(Duration(milliseconds: 100));
+          if (FirebaseService.currentUser == null) {
+            // If no user after error, it's real error
+            rethrow;
+          }
+          print('✅ Facebook Sign-In succeeded despite Pigeon error');
+        } else {
+          // Real error, rethrow
+          rethrow;
+        }
+      }
+
+      final currentUserId = FirebaseService.userId;
+      final currentUser = FirebaseService.currentUser;
+      
+      if (currentUserId != null && currentUser != null && mounted) {
+        print('🔵 Fetching user data from Firestore...');
+        final userDoc = await FirebaseService.getUser(currentUserId);
+        String userName = 'User';
+
+        if (userDoc.exists) {
+          final userData = userDoc.data() as Map<String, dynamic>;
+          userName = userData['name'] ?? 'User';
+          print('🟢 User data found: $userName');
+        } else {
+          // User document doesn't exist, create it NOW
+          print('🔵 User document not found, creating...');
+          await FirebaseService.createUser(
+            userId: currentUserId,
+            name: currentUser.displayName ?? 'Facebook User',
+            email: currentUser.email ?? '',
+            phone: '',
+            region: '',
+          );
+          userName = currentUser.displayName ?? 'Facebook User';
+          print('✅ User document created successfully!');
+        }
+
+        print('🔵 Navigating to Dashboard...');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DashboardPage(userName: userName),
           ),
-        ],
-      ),
-    );
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Login Facebook berhasil! Selamat datang $userName'),
+            backgroundColor: const Color(0xFF2E8B25),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('🔴 Facebook Sign-In error: $e');
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Facebook Login Gagal'),
+            content: Text('Terjadi kesalahan saat login dengan Facebook:\n\n$e'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   void _handleForgotPassword() {
@@ -602,85 +759,78 @@ class _LoginPageState extends State<LoginPage> {
 
                         const SizedBox(height: 20),
 
-                        // Social login buttons
+                        // Social login buttons - NOW ACTIVE!
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            // Google button - DISABLED
-                            Opacity(
-                              opacity: 0.5,
-                              child: GestureDetector(
-                                onTap: _handleGoogleLogin,
-                                child: Container(
-                                  width: 50,
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.grey[300]!,
-                                      width: 1,
-                                    ),
-                                    boxShadow: const [
-                                      BoxShadow(
-                                        color: Colors.black12,
-                                        blurRadius: 4,
-                                        offset: Offset(0, 2),
-                                      ),
-                                    ],
+                            // Google button - ACTIVE
+                            GestureDetector(
+                              onTap: _isLoading ? null : _handleGoogleLogin,
+                              child: Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.grey[300]!,
+                                    width: 1,
                                   ),
-                                  child: const Center(
-                                    child: Text(
-                                      'G',
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.red,
-                                      ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _isLoading ? Colors.black12 : Colors.black26,
+                                      blurRadius: 4,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    'G',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: _isLoading ? Colors.red.shade300 : Colors.red,
                                     ),
                                   ),
                                 ),
                               ),
                             ),
 
-                            const SizedBox(width: 20),
-
-                            // Facebook button - DISABLED
-                            Opacity(
-                              opacity: 0.5,
-                              child: GestureDetector(
-                                onTap: _handleFacebookLogin,
-                                child: Container(
-                                  width: 50,
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.grey[300]!,
-                                      width: 1,
-                                    ),
-                                    boxShadow: const [
-                                      BoxShadow(
-                                        color: Colors.black12,
-                                        blurRadius: 4,
-                                        offset: Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Center(
-                                    child: Text(
-                                      'f',
-                                      style: TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.blue,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
+                            // Facebook button temporarily disabled
+                            // const SizedBox(width: 20),
+                            // GestureDetector(
+                            //   onTap: _isLoading ? null : _handleFacebookLogin,
+                            //   child: Container(
+                            //     width: 50,
+                            //     height: 50,
+                            //     decoration: BoxDecoration(
+                            //       color: Colors.white,
+                            //       shape: BoxShape.circle,
+                            //       border: Border.all(
+                            //         color: Colors.grey[300]!,
+                            //         width: 1,
+                            //       ),
+                            //       boxShadow: [
+                            //         BoxShadow(
+                            //           color: _isLoading ? Colors.black12 : Colors.black26,
+                            //           blurRadius: 4,
+                            //           offset: Offset(0, 2),
+                            //         ),
+                            //       ],
+                            //     ),
+                            //     child: Center(
+                            //       child: Text(
+                            //         'f',
+                            //         style: TextStyle(
+                            //           fontSize: 24,
+                            //           fontWeight: FontWeight.bold,
+                            //           color: _isLoading ? Colors.blue.shade300 : Colors.blue,
+                            //         ),
+                            //       ),
+                            //     ),
+                            //   ),
+                            // ),
                           ],
                         ),
 
@@ -767,6 +917,30 @@ class _LoginPageState extends State<LoginPage> {
                         ),
 
                         const SizedBox(height: 20),
+
+                        // Test API Button
+                        Center(
+                          child: TextButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const ApiTestScreen(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.developer_mode, size: 16),
+                            label: const Text(
+                              'Test Laravel API Connection',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.grey,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 10),
 
                         // Bottom indicator
                         Center(

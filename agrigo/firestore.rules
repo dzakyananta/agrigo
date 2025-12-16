@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection - only authenticated users can read/write their own data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // OTP codes - allow unauthenticated access (untuk forgot password flow)
+    // User belum login saat lupa password, jadi perlu akses tanpa auth
+    match /otp_codes/{email} {
+      allow read, write: if true;
+      // TODO Production: Add rate limiting & expiry checks
+      // - Limit write operations per IP/email
+      // - Auto-delete expired OTPs (expiryTime < now)
+      // - Maximum 3 OTP requests per hour per email
+    }
+    
+    // Transactions - user can only read/write their own transactions
+    match /transactions/{transactionId} {
+      allow read, write: if request.auth != null && 
+                          resource.data.userId == request.auth.uid;
+    }
+    
+    // Schedules - user can only read/write their own schedules
+    match /schedules/{scheduleId} {
+      allow read, write: if request.auth != null && 
+                          resource.data.userId == request.auth.uid;
+    }
+    
+    // Commodities - read-only for all authenticated users
+    match /commodities/{commodityId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only admin can write (via Firebase Console or Admin SDK)
+    }
+    
+    // Weather data - read-only for all authenticated users
+    match /weather/{weatherId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only admin can write
+    }
+    
+    // Notifications - user can only read their own notifications
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null && 
+                   resource.data.userId == request.auth.uid;
+      allow write: if false; // Only server can write notifications
+    }
+  }
+}

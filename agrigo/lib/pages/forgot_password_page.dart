@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/firebase_service.dart';
+import '../services/firestore_service.dart';
+import '../services/otp_service.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({Key? key}) : super(key: key);
@@ -28,59 +33,130 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         _isLoading = true;
       });
 
-      // Get the input value
-      String inputValue = _selectedMethod == 'email'
-          ? _emailController.text.trim()
-          : _phoneController.text.trim();
+      try {
+        // Get the input value
+        String inputValue = _selectedMethod == 'email'
+            ? _emailController.text.trim()
+            : _phoneController.text.trim();
 
-      // Check if user exists in registered accounts
-      if (!_checkUserExists(inputValue)) {
+        if (_selectedMethod == 'email') {
+          // Generate OTP
+          final otp = OtpService.generateOtp();
+          print('🔑 Generated OTP: $otp for $inputValue');
+          
+          // Save OTP to Firestore
+          await OtpService.saveOtp(email: inputValue, otp: otp);
+          print('✅ OTP saved to Firestore');
+          
+          // Send OTP via email (Laravel backend)
+          final emailSent = await OtpService.sendOtpEmail(
+            email: inputValue,
+            otp: otp,
+          );
+          
+          setState(() {
+            _isLoading = false;
+          });
+
+          if (emailSent) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Kode OTP telah dikirim ke email Anda. Silakan cek inbox atau folder spam.'),
+                backgroundColor: Color(0xFF2E8B25),
+                duration: Duration(seconds: 4),
+              ),
+            );
+
+            // Navigate to VerificationCodePage
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => VerificationCodePage(
+                  email: inputValue,
+                  method: _selectedMethod,
+                ),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Gagal mengirim OTP. Silakan coba lagi.'),
+                backgroundColor: Colors.red,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+          
+        } else {
+          // Phone method - show message that it's not supported yet
+          setState(() {
+            _isLoading = false;
+          });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Reset password via SMS belum tersedia. Silakan gunakan email.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      } on FirebaseAuthException catch (e) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        String errorMessage = 'Gagal mengirim kode reset';
+        
+        if (e.code == 'user-not-found') {
+          errorMessage = 'Email tidak terdaftar dalam sistem';
+        } else if (e.code == 'invalid-email') {
+          errorMessage = 'Format email tidak valid';
+        } else if (e.code == 'too-many-requests') {
+          errorMessage = 'Terlalu banyak percobaan. Coba lagi nanti.';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      } catch (e) {
         setState(() {
           _isLoading = false;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              _selectedMethod == 'email'
-                  ? 'Email tidak terdaftar dalam sistem'
-                  : 'Nomor telepon tidak terdaftar dalam sistem',
-            ),
+            content: Text('Error: $e'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
         );
-        return;
       }
-
-      // Simulate sending verification code
-      await Future.delayed(const Duration(seconds: 2));
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Kode OTP telah dikirim ke ${_selectedMethod == 'email' ? 'email' : 'SMS'} Anda',
-          ),
-          backgroundColor: const Color(0xFF2E8B25),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-
-      // Navigate to verification page
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              VerificationCodePage(email: inputValue, method: _selectedMethod),
-        ),
-      );
     }
   }
 
+  Future<bool> _checkUserExistsInFirestore(String email) async {
+    try {
+      // Query Firestore to check if user with this email exists
+      final firestoreService = FirestoreService();
+      final usersSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+      
+      return usersSnapshot.docs.isNotEmpty;
+    } catch (e) {
+      print('Error checking user: $e');
+      return false;
+    }
+  }
+
+  // OLD METHOD - NOT USED ANYMORE
   bool _checkUserExists(String identifier) {
     // Check against registered accounts (same as login validation)
     final registeredAccounts = {
@@ -401,10 +477,10 @@ class VerificationCodePage extends StatefulWidget {
 
 class _VerificationCodePageState extends State<VerificationCodePage> {
   final List<TextEditingController> _controllers = List.generate(
-    6,
+    5,
     (index) => TextEditingController(),
   );
-  final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
+  final List<FocusNode> _focusNodes = List.generate(5, (index) => FocusNode());
   bool _isLoading = false;
   int _resendTimer = 60;
   bool _canResend = false;
@@ -445,29 +521,57 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
     });
   }
 
-  void _handleResend() {
+  void _handleResend() async {
     if (_canResend) {
       setState(() {
         _resendTimer = 60;
         _canResend = false;
+        _isLoading = true;
       });
-      _startTimer();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Kode verifikasi telah dikirim ulang'),
-          backgroundColor: Color(0xFF2E8B25),
-        ),
+      
+      // Generate new OTP
+      final otp = OtpService.generateOtp();
+      
+      // Save new OTP to Firestore
+      await OtpService.saveOtp(email: widget.email, otp: otp);
+      
+      // Send OTP via email
+      final emailSent = await OtpService.sendOtpEmail(
+        email: widget.email,
+        otp: otp,
       );
+      
+      setState(() {
+        _isLoading = false;
+      });
+      
+      _startTimer();
+      
+      if (emailSent) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Kode OTP baru telah dikirim ke email Anda'),
+            backgroundColor: Color(0xFF2E8B25),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal mengirim OTP. Silakan coba lagi.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   Future<void> _handleVerification() async {
     String code = _controllers.map((controller) => controller.text).join();
 
-    if (code.length < 6) {
+    if (code.length < 5) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Masukkan kode verifikasi lengkap'),
+          content: Text('Masukkan kode verifikasi lengkap (5 digit)'),
           backgroundColor: Colors.red,
         ),
       );
@@ -478,31 +582,38 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
       _isLoading = true;
     });
 
-    // Simulate verification with simple validation
-    await Future.delayed(const Duration(seconds: 2));
+    // Verify OTP with Firestore
+    final result = await OtpService.verifyOtp(
+      email: widget.email,
+      otp: code,
+    );
 
     setState(() {
       _isLoading = false;
     });
 
-    // For demo purposes, accept any 6-digit code
-    // In real implementation, this would verify against server
-    if (code == '123456' || code.length == 6) {
-      // Navigate to reset password page
-      Navigator.push(
+    if (result['success']) {
+      // OTP valid - Navigate to reset password page
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message']),
+          backgroundColor: const Color(0xFF2E8B25),
+        ),
+      );
+      
+      Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) => ResetPasswordPage(email: widget.email),
         ),
       );
     } else {
+      // OTP invalid
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Kode verifikasi salah. Coba lagi atau gunakan 123456 untuk demo.',
-          ),
+        SnackBar(
+          content: Text(result['message']),
           backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
+          duration: const Duration(seconds: 3),
         ),
       );
     }
@@ -570,7 +681,7 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
 
                   // Subtitle
                   Text(
-                    'Masukkan 6 digit kode verifikasi dari email atau\nnomor telepon yang telah kami kirim',
+                    'Masukkan 5 digit kode verifikasi dari email atau\nnomor telepon yang telah kami kirim',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
@@ -581,10 +692,10 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
 
                   const SizedBox(height: 60),
 
-                  // Code input fields
+                  // Code input fields (5 boxes)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: List.generate(6, (index) {
+                    children: List.generate(5, (index) {
                       return Container(
                         width: 40,
                         height: 45,
@@ -626,7 +737,7 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
                           ],
                           onChanged: (value) {
                             setState(() {});
-                            if (value.isNotEmpty && index < 5) {
+                            if (value.isNotEmpty && index < 4) {
                               _focusNodes[index + 1].requestFocus();
                             } else if (value.isEmpty && index > 0) {
                               _focusNodes[index - 1].requestFocus();
@@ -754,23 +865,67 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
         _isLoading = true;
       });
 
-      // Simulate password reset
-      await Future.delayed(const Duration(seconds: 2));
+      try {
+        // Reset password via Firebase Admin SDK
+        final result = await OtpService.resetPassword(
+          email: widget.email,
+          newPassword: _newPasswordController.text,
+        );
+        
+        if (result['success']) {
+          // Delete OTP after successful password reset
+          await OtpService.deleteOtp(widget.email);
+          
+          setState(() {
+            _isLoading = false;
+          });
 
-      setState(() {
-        _isLoading = false;
-      });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['message']),
+                backgroundColor: const Color(0xFF2E8B25),
+                duration: const Duration(seconds: 4),
+              ),
+            );
 
-      // Show success message and navigate back to login
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password berhasil direset!'),
-          backgroundColor: Color(0xFF2E8B25),
-        ),
-      );
+            // Navigate back to login (pop all pages)
+            Future.delayed(const Duration(seconds: 1), () {
+              if (mounted) {
+                Navigator.popUntil(context, (route) => route.isFirst);
+              }
+            });
+          }
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
 
-      // Navigate back to login (pop all pages)
-      Navigator.popUntil(context, (route) => route.isFirst);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['message']),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+        }
+        
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
