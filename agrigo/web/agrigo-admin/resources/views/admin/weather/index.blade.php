@@ -14,7 +14,8 @@
         width: 100%;
         /* keep the hero height fixed and allow it to grow wider horizontally */
         height: 390px; /* preserve the current vertical size */
-        max-width: 760px; /* widened so the hero extends more to the right */
+        max-width: none; /* allow full-width inside the column */
+        margin: 0 auto; /* center within parent */
         display: block;
     }
 
@@ -36,14 +37,17 @@
         inset: 0;
         width: 100%;
         height: 100%;
+        display:block;
         object-fit: cover;
-        object-position: center 48%; /* slightly below center so field shows */
+        object-position: center 42%; /* tune vertical crop so field sits nicely */
         z-index: 1;
         filter: brightness(0.98) saturate(1.02);
         transform-origin: center center;
-        transform: scale(1.0);
-        border-radius: 18px; /* clip image to same rounded shape */
-        -webkit-mask-image: linear-gradient(#000, #000); /* ensure clipping in some browsers */
+        /* slightly scale so horizontal crop extends left/right without changing container */
+        transform: scale(1.18);
+        will-change: transform;
+        /* rely on container clipping for rounded corners */
+        -webkit-mask-image: none;
     }
     .weather-hero .hero-overlay {
         position: absolute;
@@ -176,7 +180,26 @@
             @endphp
             <div class="weather-hero">
                 <div class="hero-bg">
-                    <img class="hero-bg-img" src="/images/weather-landscape-2.svg" alt="weather background">
+                    <!-- Prefer user-provided photo if present, otherwise fall back to bundled image -->
+                    @php
+                        $candidates = [
+                            public_path('images/weather-field.jpg'),
+                            public_path('images/pemandangan.jpeg'),
+                            public_path('images/pemandangan.jpg'),
+                            public_path('images/pemandangan.png')
+                        ];
+                        $found = null;
+                        foreach ($candidates as $c) {
+                            if (file_exists($c)) { $found = $c; break; }
+                        }
+                    @endphp
+                    @if($found)
+                        {{-- Use relative URL path for found file --}}
+                        @php $rel = '/images/' . basename($found); @endphp
+                        <img class="hero-bg-img" src="{{ $rel }}" alt="weather background">
+                    @else
+                        <img class="hero-bg-img" src="/images/weather-rice-field.svg" alt="weather background">
+                    @endif
                     <div class="hero-overlay" aria-hidden="true"></div>
                     <div class="hero-left">
                         <div>

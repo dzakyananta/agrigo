@@ -20,7 +20,7 @@
                             <div class="col-md-7 p-3">
                                 <h5 class="mb-3 fw-bold" style="color: #1f2937;">Peta Sebaran Petani - Jawa Barat</h5>
                                 <div class="position-relative" style="height: 250px; background: #e5e7eb; border-radius: 8px; overflow: hidden;">
-                                    <img src="https://via.placeholder.com/600x250/4ade80/ffffff?text=Peta+Jawa+Barat" 
+                                     <img src="/images/PETA.jpeg" 
                                          alt="Peta Jawa Barat" 
                                          class="w-100 h-100" 
                                          style="object-fit: cover;">
@@ -69,7 +69,7 @@
                             <div class="col-md-7 p-3">
                                 <h5 class="mb-3 fw-bold" style="color: #1f2937;">Peta Sebaran Petani - Lampung</h5>
                                 <div class="position-relative" style="height: 250px; background: #e5e7eb; border-radius: 8px; overflow: hidden;">
-                                    <img src="https://via.placeholder.com/600x250/60a5fa/ffffff?text=Peta+Lampung" 
+                                     <img src="/images/PETA.jpeg" 
                                          alt="Peta Lampung" 
                                          class="w-100 h-100" 
                                          style="object-fit: cover;">
@@ -118,7 +118,7 @@
                             <div class="col-md-7 p-3">
                                 <h5 class="mb-3 fw-bold" style="color: #1f2937;">Peta Sebaran Petani - Jawa Tengah</h5>
                                 <div class="position-relative" style="height: 250px; background: #e5e7eb; border-radius: 8px; overflow: hidden;">
-                                    <img src="https://via.placeholder.com/600x250/34d399/ffffff?text=Peta+Jawa+Tengah" 
+                                     <img src="/images/PETA.jpeg" 
                                          alt="Peta Jawa Tengah" 
                                          class="w-100 h-100" 
                                          style="object-fit: cover;">
