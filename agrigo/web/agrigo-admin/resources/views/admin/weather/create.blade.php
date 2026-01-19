@@ -22,7 +22,17 @@
                 <div class="card-body">
                     <form action="{{ route('admin.weather.store') }}" method="POST">
                         @csrf
-                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Assign to User</label>
+                                <select name="user_id" class="form-select">
+                                    <option value="">(Global / All Users)</option>
+                                    @foreach($users as $u)
+                                        <option value="{{ $u->id }}" {{ old('user_id') == $u->id ? 'selected' : '' }}>{{ $u->name }} ({{ $u->email }})</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Location <span class="text-danger">*</span></label>

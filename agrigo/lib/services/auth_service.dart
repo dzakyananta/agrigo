@@ -81,13 +81,13 @@ class AuthService {
   }
 
   // ================= GOOGLE LOGIN =================
-  static Future<UserCredential?> signInWithGoogle() async {
-    return await FirebaseService.signInWithGoogle();
+  static Future<void> signInWithGoogle() async {
+    await FirebaseService.signInWithGoogle();
   }
 
   // ================= FACEBOOK LOGIN =================
-  static Future<UserCredential?> signInWithFacebook() async {
-    return await FirebaseService.signInWithFacebook();
+  static Future<void> signInWithFacebook() async {
+    await FirebaseService.signInWithFacebook();
   }
 
   // ================= LOGOUT =================
@@ -134,8 +134,7 @@ class AuthService {
     }
   }
 
-  static bool get isEmailVerified =>
-      _auth.currentUser?.emailVerified ?? false;
+  static bool get isEmailVerified => _auth.currentUser?.emailVerified ?? false;
 
   // ================= DELETE ACCOUNT =================
   static Future<void> deleteAccount() async {

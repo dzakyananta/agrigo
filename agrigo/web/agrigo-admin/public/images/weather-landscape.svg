@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simple scenic SVG used as lightweight hero background -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#bde4ff" />
+      <stop offset="60%" stop-color="#9ee0c9" />
+      <stop offset="100%" stop-color="#6fd07f" />
+    </linearGradient>
+    <linearGradient id="hill" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0%" stop-color="#2f855a" />
+      <stop offset="100%" stop-color="#16a34a" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="400" fill="url(#sky)"/>
+  <g transform="translate(0,50)">
+    <path d="M0,250 C150,200 300,220 480,240 C660,260 820,200 1000,240 C1150,275 1200,260 1200,260 L1200,400 L0,400 Z" fill="url(#hill)" opacity="0.95"/>
+    <path d="M0,280 C200,240 360,260 560,270 C760,280 900,240 1200,280 L1200,400 L0,400 Z" fill="#1f7a46" opacity="0.85"/>
+  </g>
+  <!-- subtle vignette -->
+  <rect width="1200" height="400" fill="black" opacity="0.03"/>
+</svg>

@@ -175,7 +175,7 @@ class FirebaseService {
 
       print('🔵 Signing in with Firebase...');
       await _auth.signInWithCredential(credential);
-      
+
       // Wait a bit for auth to settle
       await Future.delayed(Duration(milliseconds: 500));
 
@@ -199,8 +199,14 @@ class FirebaseService {
         }
       }
     } catch (e) {
+      // Log friendly message and fail gracefully. Native Google Play services
+      // may emit DEVELOPER_ERROR / SecurityException logs which originate
+      // from the Google Play services process; these are unrelated to Dart
+      // control flow and cannot be suppressed here. Handle errors gracefully
+      // so the app UI can continue.
       print('🔴 Google sign in error: $e');
-      rethrow;
+      // Do not rethrow - caller (UI) can check auth state instead.
+      return;
     }
   }
 
@@ -209,10 +215,11 @@ class FirebaseService {
     try {
       print('🔵 Starting Facebook Sign-In...');
       print('🔵 Requesting Facebook permissions...');
-      
+
       final LoginResult result = await FacebookAuth.instance.login(
         permissions: ['email', 'public_profile'],
-        loginBehavior: LoginBehavior.nativeWithFallback, // Try native app first, fallback to web
+        loginBehavior: LoginBehavior
+            .nativeWithFallback, // Try native app first, fallback to web
       );
 
       print('🔵 Facebook login result status: ${result.status}');
@@ -220,8 +227,9 @@ class FirebaseService {
 
       if (result.status == LoginStatus.success) {
         print('🟢 Facebook login successful!');
-        print('🔵 Access Token: ${result.accessToken?.token.substring(0, 20)}...');
-        
+        print(
+            '🔵 Access Token: ${result.accessToken?.token.substring(0, 20)}...');
+
         print('🔵 Fetching Facebook user data...');
         final userData = await FacebookAuth.instance.getUserData();
         print('🟢 Facebook user data retrieved:');
@@ -233,38 +241,39 @@ class FirebaseService {
             FacebookAuthProvider.credential(result.accessToken!.token);
 
         print('🔵 Signing in with Firebase using Facebook credential...');
-        
+
         try {
           await _auth.signInWithCredential(credential);
         } catch (e) {
           // Check if error is due to email already in use
-          if (e.toString().contains('account-exists-with-different-credential') ||
+          if (e
+                  .toString()
+                  .contains('account-exists-with-different-credential') ||
               e.toString().contains('email-already-in-use')) {
             print('⚠️ Email already exists with different provider');
             print('🔵 Attempting to link Facebook with existing account...');
-            
+
             // Get the email from Facebook data
             final email = userData['email'] as String?;
             if (email != null && email.isNotEmpty) {
               // Fetch sign-in methods for this email
               final methods = await _auth.fetchSignInMethodsForEmail(email);
               print('🔵 Existing sign-in methods: $methods');
-              
+
               if (methods.contains('google.com')) {
-                print('⚠️ Account exists with Google. User needs to link accounts.');
-                throw Exception(
-                  'Email $email sudah terdaftar dengan Google. '
-                  'Silakan login dengan Google terlebih dahulu, '
-                  'lalu link akun Facebook dari Profile Settings.'
-                );
+                print(
+                    '⚠️ Account exists with Google. User needs to link accounts.');
+                throw Exception('Email $email sudah terdaftar dengan Google. '
+                    'Silakan login dengan Google terlebih dahulu, '
+                    'lalu link akun Facebook dari Profile Settings.');
               }
             }
-            
+
             rethrow;
           }
           rethrow;
         }
-        
+
         // Wait a bit for auth to settle
         await Future.delayed(Duration(milliseconds: 500));
 
@@ -384,19 +393,23 @@ class FirebaseService {
   }
 
   static Future<DocumentReference> createTransaction({
+    String? userId,
     required String type,
     required double amount,
+    String? source,
     String? commodityName,
     String? description,
     required DateTime date,
   }) async {
+    final targetUserId = userId ?? FirebaseService.userId;
     return await _db
         .collection(usersCollection)
-        .doc(userId)
+        .doc(targetUserId)
         .collection('transactions')
         .add({
       'type': type,
       'amount': amount,
+      'source': source ?? '',
       'commodity_name': commodityName,
       'description': description,
       'date': Timestamp.fromDate(date),
@@ -449,5 +462,100 @@ class FirebaseService {
         .where('is_active', isEqualTo: true)
         .orderBy('name')
         .snapshots();
+  }
+
+  // Create a global region document
+  static Future<DocumentReference> addRegion({
+    required String name,
+    required String province,
+    required Map<String, dynamic> coordinates,
+  }) async {
+    return await _db.collection('regions').add({
+      'name': name,
+      'province': province,
+      'coordinates': coordinates,
+      'created_at': FieldValue.serverTimestamp(),
+      'is_active': true,
+    });
+  }
+
+  // Add a commodity to global commodities collection
+  static Future<DocumentReference> addCommodity({
+    required String name,
+    required String category,
+    required double currentPrice,
+    required String region,
+    required String unit,
+    String? description,
+    String? imageUrl,
+  }) async {
+    return await _db.collection('commodities').add({
+      'name': name,
+      'category': category,
+      'current_price': currentPrice,
+      'region': region,
+      'unit': unit,
+      'description': description ?? '',
+      'image_url': imageUrl ?? '',
+      'is_active': true,
+      'created_at': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // Create a notification document (and optionally per-user subcollection)
+  static Future<DocumentReference> createNotification({
+    required String userId,
+    required String title,
+    required String message,
+    required String type,
+    Map<String, dynamic>? data,
+  }) async {
+    // Save to central notifications collection
+    final doc = await _db.collection('notifications').add({
+      'user_id': userId,
+      'title': title,
+      'message': message,
+      'type': type,
+      'data': data ?? {},
+      'read': false,
+      'created_at': FieldValue.serverTimestamp(),
+    });
+
+    // Also create under user's subcollection for quick lookup
+    await _db
+        .collection(usersCollection)
+        .doc(userId)
+        .collection('notifications')
+        .doc(doc.id)
+        .set({
+      'title': title,
+      'message': message,
+      'type': type,
+      'data': data ?? {},
+      'read': false,
+      'created_at': FieldValue.serverTimestamp(),
+    });
+
+    return doc;
+  }
+
+  // Return commodities optionally filtered by region
+  static Future<QuerySnapshot> getCommodities({String? region}) async {
+    Query collection =
+        _db.collection('commodities').where('is_active', isEqualTo: true);
+    if (region != null && region.isNotEmpty) {
+      collection = collection.where('region', isEqualTo: region);
+    }
+    return await collection.orderBy('name').get();
+  }
+
+  static Future<void> updateCommodityPrice({
+    required String commodityId,
+    required double newPrice,
+  }) async {
+    await _db.collection('commodities').doc(commodityId).update({
+      'current_price': newPrice,
+      'updated_at': FieldValue.serverTimestamp(),
+    });
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/app_colors.dart';
 import '../services/firebase_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -43,9 +44,9 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final result = await FirebaseService.signInWithGoogle();
-      
-      if (result != null && mounted) {
+      await FirebaseService.signInWithGoogle();
+
+      if (FirebaseService.currentUser != null && mounted) {
         Navigator.pushReplacementNamed(context, '/home');
       }
     } catch (e) {
@@ -63,9 +64,9 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final result = await FirebaseService.signInWithFacebook();
-      
-      if (result != null && mounted) {
+      await FirebaseService.signInWithFacebook();
+
+      if (FirebaseService.currentUser != null && mounted) {
         Navigator.pushReplacementNamed(context, '/home');
       }
     } catch (e) {
@@ -91,9 +92,9 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 40),
-                
+
                 // Logo
-                Icon(Icons.agriculture, size: 80, color: Colors.green),
+                Icon(Icons.agriculture, size: 80, color: AppColors.primary),
                 const SizedBox(height: 16),
                 Text(
                   'Agrigo',
@@ -101,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: Colors.green,
+                    color: AppColors.primary,
                   ),
                 ),
                 Text(
@@ -109,9 +110,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.grey[600]),
                 ),
-                
+
                 const SizedBox(height: 40),
-                
+
                 // Email field
                 TextFormField(
                   controller: _emailController,
@@ -130,9 +131,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Password field
                 TextFormField(
                   controller: _passwordController,
@@ -151,14 +152,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Login button
                 ElevatedButton(
                   onPressed: _isLoading ? null : _loginWithEmail,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+                    backgroundColor: AppColors.primary,
                     padding: const EdgeInsets.all(16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -168,9 +169,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       ? CircularProgressIndicator(color: Colors.white)
                       : Text('Login', style: TextStyle(fontSize: 16)),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Divider
                 Row(
                   children: [
@@ -182,9 +183,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     Expanded(child: Divider()),
                   ],
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Google Sign In
                 OutlinedButton.icon(
                   onPressed: _isLoading ? null : _loginWithGoogle,
@@ -197,7 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-                
+
                 // Facebook Sign In - HIDE DULU (Comment)
                 /*
                 const SizedBox(height: 12),
@@ -213,9 +214,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 */
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Sign up link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

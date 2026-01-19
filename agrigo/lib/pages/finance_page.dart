@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
+import '../utils/app_colors.dart';
 import 'package:intl/intl.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:flutter/services.dart';
+import 'dart:typed_data';
+import 'package:excel/excel.dart' as excel_pkg;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'transaction_form_page.dart';
 import 'commodity_detail_page.dart';
 import '../services/schedule_service.dart';
 import '../services/api_service.dart';
+import '../services/firebase_service.dart';
+import '../services/user_data_store.dart';
 
 class FinancePage extends StatefulWidget {
   const FinancePage({super.key});
@@ -149,7 +158,7 @@ class _FinancePageState extends State<FinancePage> {
     }
 
     final colors = [
-      Colors.green,
+      AppColors.primary,
       Colors.orange,
       Colors.red,
       Colors.blue,
@@ -197,42 +206,68 @@ class _FinancePageState extends State<FinancePage> {
   }
 
   Future<void> _loadTransactionsFromStorage() async {
-    final prefs = await SharedPreferences.getInstance();
-    final transactionsJson = prefs.getString('finance_transactions');
-
-    if (transactionsJson != null) {
-      try {
-        final List<dynamic> decoded = jsonDecode(transactionsJson);
-        setState(() {
-          transactions = decoded.cast<Map<String, dynamic>>();
-        });
-        print('✅ Loaded ${transactions.length} transactions from storage');
-        // Debug: print transactions
-        for (var t in transactions) {
-          print(
-            'Transaction: ${t['komoditas']} - ${t['type']} - ${t['totalHarga']}',
-          );
-        }
-      } catch (e) {
-        print('⚠️ Error loading transactions: $e');
-        setState(() {
-          transactions = [];
-        });
-      }
+    final uid = FirebaseService.userId;
+    List<dynamic> loaded = [];
+    if (uid != null) {
+      loaded =
+          await UserDataStore.instance.loadList(uid, 'finance_transactions');
     } else {
-      print('ℹ️ No saved transactions found');
-      setState(() {
-        transactions = [];
-      });
+      final prefs = await SharedPreferences.getInstance();
+      final transactionsJson = prefs.getString('finance_transactions');
+      if (transactionsJson != null) {
+        try {
+          loaded = jsonDecode(transactionsJson) as List<dynamic>;
+        } catch (_) {
+          loaded = [];
+        }
+      }
     }
+
+    setState(() {
+      transactions = loaded.cast<Map<String, dynamic>>();
+    });
+    print(
+        '✅ Loaded ${transactions.length} transactions from storage (uid=${uid ?? 'guest'})');
+  }
+
+  List<Map<String, dynamic>> _getFilteredTransactions() {
+    if (selectedSchedule != null) {
+      final scheduleKomoditas =
+          selectedSchedule!.komoditas.toLowerCase().trim();
+      return transactions.where((t) {
+        final transactionKomoditas =
+            (t['komoditas']?.toString() ?? '').toLowerCase().trim();
+        final transactionTarget =
+            (t['target']?.toString() ?? '').toLowerCase().trim();
+
+        final isMatchingCommodity = transactionKomoditas == scheduleKomoditas ||
+            transactionTarget == scheduleKomoditas ||
+            transactionKomoditas.contains(scheduleKomoditas) ||
+            transactionTarget.contains(scheduleKomoditas) ||
+            scheduleKomoditas.contains(transactionKomoditas);
+
+        return isMatchingCommodity;
+      }).toList();
+    }
+
+    // When no schedule is selected, treat as "Semua Transaksi" and
+    // return all transactions so exports include full dataset.
+    return List<Map<String, dynamic>>.from(transactions);
   }
 
   Future<void> _saveTransactionsToStorage() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final transactionsJson = jsonEncode(transactions);
-      await prefs.setString('finance_transactions', transactionsJson);
-      print('✅ Saved ${transactions.length} transactions to storage');
+      final uid = FirebaseService.userId;
+      if (uid != null) {
+        await UserDataStore.instance
+            .saveList(uid, 'finance_transactions', transactions);
+      } else {
+        final prefs = await SharedPreferences.getInstance();
+        final transactionsJson = jsonEncode(transactions);
+        await prefs.setString('finance_transactions', transactionsJson);
+      }
+      print(
+          '✅ Saved ${transactions.length} transactions to storage (uid=${uid ?? 'guest'})');
     } catch (e) {
       print('⚠️ Error saving transactions: $e');
     }
@@ -311,6 +346,13 @@ class _FinancePageState extends State<FinancePage> {
           ),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.download_outlined, color: Colors.black),
+            onPressed: _showExportDialog,
+            tooltip: 'Unduh',
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -344,19 +386,337 @@ class _FinancePageState extends State<FinancePage> {
     );
   }
 
+  void _showExportDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Pilih format unduhan'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf),
+              title: const Text('PDF'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _exportToPdf();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.table_chart),
+              title: const Text('Excel (XLSX)'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _exportToExcel();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<Directory> _getSaveDirectory() async {
+    // Try to use the Downloads folder on Android if available, without
+    // explicitly requesting permissions here. If the OS denies access at
+    // runtime, writing will fail and we will fall back to the app documents
+    // directory.
+    try {
+      if (Platform.isAndroid) {
+        final dirs = await getExternalStorageDirectories(
+            type: StorageDirectory.downloads);
+        if (dirs != null && dirs.isNotEmpty) {
+          final downloads = dirs.first;
+          if (downloads != null) return Directory(downloads.path);
+        }
+
+        final dir = await getExternalStorageDirectory();
+        if (dir != null) {
+          final downloads = Directory('${dir.path}/Download');
+          if (await downloads.exists()) return downloads;
+          return dir;
+        }
+      }
+    } catch (e) {
+      // ignore and fallback
+    }
+    return await getApplicationDocumentsDirectory();
+  }
+
+  Future<void> _exportToPdf() async {
+    // Use currently visible (filtered) transactions for export
+    final filtered = _getFilteredTransactions();
+
+    if (filtered.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tidak ada data untuk diunduh')),
+        );
+      }
+      return;
+    }
+
+    // Table headers and rows (computed outside try so fallback can reuse them)
+    final headers = [
+      'Tanggal',
+      'Tipe',
+      'Komoditas/Target',
+      'Total Harga',
+      'Catatan',
+    ];
+
+    final dataRows = filtered
+        .map((t) => [
+              t['tanggal'] ?? '-',
+              (t['type'] ?? '-').toString(),
+              (t['komoditas'] ?? t['target'] ?? '-').toString(),
+              (t['totalHarga'] ?? '-').toString(),
+              (t['catatan'] ?? '-').toString(),
+            ])
+        .toList();
+
+    try {
+      final pdf = pw.Document();
+
+      pdf.addPage(pw.MultiPage(
+        build: (context) => [
+          pw.Header(
+              level: 0,
+              child: pw.Text('Keuangan', style: pw.TextStyle(fontSize: 18))),
+          pw.SizedBox(height: 8),
+          pw.Table.fromTextArray(
+            headers: headers,
+            data: dataRows,
+            headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            cellAlignment: pw.Alignment.centerLeft,
+          ),
+        ],
+      ));
+
+      final bytes = await pdf.save();
+      // Try to save using platform-native Downloads (Android via MethodChannel)
+      try {
+        final filename =
+            'keuangan_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
+        final uri =
+            await _saveBytesToDownloads(bytes, filename, 'application/pdf');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Berhasil menyimpan PDF di: $uri')),
+          );
+        }
+      } catch (e) {
+        // Fallback to app documents
+        final dir = await _getSaveDirectory();
+        final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+        final file = File('${dir.path}/keuangan_$timestamp.pdf');
+        await file.writeAsBytes(bytes, flush: true);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Berhasil menyimpan PDF di: ${file.path}')),
+          );
+        }
+      }
+    } catch (e) {
+      // Fallback: save to application documents and open share sheet so user can
+      // explicitly save to device (no special storage permission required).
+      try {
+        final fallbackPdf = pw.Document();
+        fallbackPdf.addPage(pw.MultiPage(
+          build: (context) => [
+            pw.Header(
+                level: 0,
+                child: pw.Text('Keuangan', style: pw.TextStyle(fontSize: 18))),
+            pw.SizedBox(height: 8),
+            pw.Table.fromTextArray(
+              headers: headers,
+              data: dataRows,
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              cellAlignment: pw.Alignment.centerLeft,
+            ),
+          ],
+        ));
+
+        final bytes = await fallbackPdf.save();
+        final appDoc = await getApplicationDocumentsDirectory();
+        final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+        final fallback = File('${appDoc.path}/keuangan_$timestamp.pdf');
+        await fallback.writeAsBytes(bytes, flush: true);
+        // Saved fallback file to app documents. Inform the user of the path.
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text('File disimpan sementara di: ${fallback.path}')),
+          );
+        }
+      } catch (err) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Gagal membuat PDF: ${err.toString()}')),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _exportToExcel() async {
+    final filtered = _getFilteredTransactions();
+
+    if (filtered.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tidak ada data untuk diunduh')),
+        );
+      }
+      return;
+    }
+
+    try {
+      final excel = excel_pkg.Excel.createExcel();
+      final sheetName = 'Keuangan';
+      final sheet = excel[sheetName];
+
+      final headers = [
+        'Tanggal',
+        'Tipe',
+        'Komoditas/Target',
+        'Total Harga',
+        'Catatan'
+      ];
+      sheet.appendRow(headers);
+
+      for (var t in filtered) {
+        sheet.appendRow([
+          t['tanggal'] ?? '-',
+          t['type'] ?? '-',
+          t['komoditas'] ?? t['target'] ?? '-',
+          t['totalHarga'] ?? '-',
+          t['catatan'] ?? '-',
+        ]);
+      }
+
+      final bytes = excel.encode();
+      if (bytes == null) throw Exception('Gagal encode Excel');
+
+      try {
+        final filename =
+            'keuangan_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx';
+        final uri = await _saveBytesToDownloads(bytes, filename,
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Berhasil menyimpan Excel di: $uri')),
+          );
+        }
+      } catch (e) {
+        final dir = await _getSaveDirectory();
+        final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+        final file = File('${dir.path}/keuangan_$timestamp.xlsx');
+        await file.writeAsBytes(bytes, flush: true);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text('Berhasil menyimpan Excel di: ${file.path}')),
+          );
+        }
+      }
+    } catch (e) {
+      // Fallback: save to application documents and open share sheet
+      try {
+        final fallbackExcel = excel_pkg.Excel.createExcel();
+        final sheetName = 'Keuangan';
+        final sheet = fallbackExcel[sheetName];
+
+        final currency = NumberFormat.currency(
+            locale: 'id', symbol: 'Rp ', decimalDigits: 0);
+        final fd = financeData;
+        final totalIncome = fd['totalIncome'] as int? ?? 0;
+        final totalExpense = fd['totalExpense'] as int? ?? 0;
+        final profitLoss = fd['totalProfitLoss'] as int? ?? 0;
+
+        // Summary rows
+        sheet.appendRow(['Total Pemasukan', currency.format(totalIncome)]);
+        sheet.appendRow(['Total Pengeluaran', currency.format(totalExpense)]);
+        sheet.appendRow(['Laba/Rugi', currency.format(profitLoss)]);
+        sheet.appendRow([]); // empty row before headers
+
+        final headers = [
+          'Tanggal',
+          'Tipe',
+          'Komoditas/Target',
+          'Total Harga',
+          'Catatan'
+        ];
+        sheet.appendRow(headers);
+
+        for (var t in filtered) {
+          final amount = _parseAmount(t['totalHarga']);
+          sheet.appendRow([
+            t['tanggal'] ?? '-',
+            t['type'] ?? '-',
+            t['komoditas'] ?? t['target'] ?? '-',
+            currency.format(amount),
+            t['catatan'] ?? '-',
+          ]);
+        }
+
+        final bytesFallback = fallbackExcel.encode();
+        if (bytesFallback == null) throw Exception('Gagal encode Excel');
+        final appDoc = await getApplicationDocumentsDirectory();
+        final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+        final fallback = File('${appDoc.path}/keuangan_$timestamp.xlsx');
+        await fallback.writeAsBytes(bytesFallback, flush: true);
+
+        // Saved fallback file to app documents. Inform the user of the path.
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text('File disimpan sementara di: ${fallback.path}')),
+          );
+        }
+      } catch (err) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Gagal membuat Excel: ${err.toString()}')),
+          );
+        }
+      }
+    }
+  }
+
+  static const _platform = MethodChannel('agrigo/native_save');
+
+  Future<String?> _saveBytesToDownloads(
+      List<int> bytes, String filename, String mime) async {
+    try {
+      final result = await _platform.invokeMethod('saveToDownloads', {
+        'filename': filename,
+        'mime': mime,
+        'bytes': Uint8List.fromList(bytes),
+      });
+      return result as String?;
+    } catch (e) {
+      // propagate error to caller
+      throw e;
+    }
+  }
+
   Widget _buildPeriodSelector() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.green.shade50, Colors.green.shade100],
+          colors: [
+            AppColors.primary.withOpacity(0.05),
+            AppColors.primary.withOpacity(0.08)
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.green.withOpacity(0.1),
+            color: AppColors.primary.withOpacity(0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -372,7 +732,7 @@ class _FinancePageState extends State<FinancePage> {
             ),
             child: Icon(
               Icons.calendar_month_rounded,
-              color: Colors.green.shade700,
+              color: AppColors.primary.withOpacity(0.85),
               size: 24,
             ),
           ),
@@ -400,7 +760,8 @@ class _FinancePageState extends State<FinancePage> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.green.shade200),
+                      border:
+                          Border.all(color: AppColors.primary.withOpacity(0.2)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -413,14 +774,14 @@ class _FinancePageState extends State<FinancePage> {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Colors.green.shade900,
+                              color: AppColors.primary.withOpacity(0.95),
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         Icon(
                           Icons.arrow_drop_down,
-                          color: Colors.green.shade700,
+                          color: AppColors.primary.withOpacity(0.85),
                           size: 20,
                         ),
                       ],
@@ -463,7 +824,7 @@ class _FinancePageState extends State<FinancePage> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.green.shade900,
+                  color: AppColors.primary.withOpacity(0.95),
                 ),
               ),
             ),
@@ -474,10 +835,10 @@ class _FinancePageState extends State<FinancePage> {
                 children: [
                   ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: Colors.green.shade50,
+                      backgroundColor: AppColors.primary.withOpacity(0.05),
                       child: Icon(
                         Icons.all_inclusive,
-                        color: Colors.green.shade700,
+                        color: AppColors.primary.withOpacity(0.85),
                         size: 20,
                       ),
                     ),
@@ -487,7 +848,8 @@ class _FinancePageState extends State<FinancePage> {
                     ),
                     subtitle: const Text('Tampilkan semua data'),
                     trailing: selectedSchedule == null
-                        ? Icon(Icons.check_circle, color: Colors.green.shade700)
+                        ? Icon(Icons.check_circle,
+                            color: AppColors.primary.withOpacity(0.85))
                         : null,
                     onTap: () {
                       setState(() => selectedSchedule = null);
@@ -519,7 +881,7 @@ class _FinancePageState extends State<FinancePage> {
                       trailing: isSelected
                           ? Icon(
                               Icons.check_circle,
-                              color: Colors.green.shade700,
+                              color: AppColors.primary.withOpacity(0.85),
                             )
                           : Container(
                               padding: const EdgeInsets.symmetric(
@@ -562,7 +924,7 @@ class _FinancePageState extends State<FinancePage> {
       case 'Akan Datang':
         return Colors.blue;
       case 'Sedang Berlangsung':
-        return Colors.green;
+        return AppColors.primary;
       case 'Selesai':
         return Colors.grey;
       default:
@@ -581,8 +943,8 @@ class _FinancePageState extends State<FinancePage> {
         gradient: LinearGradient(
           colors: isProfit
               ? [
-                  const Color(0xFF4CAF50),
-                  const Color(0xFF45A049),
+                  AppColors.primary,
+                  AppColors.primary.withOpacity(0.85),
                 ] // Green for profit
               : [
                   const Color(0xFFf44336),
@@ -594,7 +956,7 @@ class _FinancePageState extends State<FinancePage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: (isProfit ? Colors.green : Colors.red).withOpacity(0.3),
+            color: (isProfit ? AppColors.primary : Colors.red).withOpacity(0.3),
             spreadRadius: 0,
             blurRadius: 10,
             offset: const Offset(0, 4),
@@ -737,7 +1099,7 @@ class _FinancePageState extends State<FinancePage> {
               Expanded(
                 child: _buildActionButton(
                   'Pemasukan',
-                  Colors.green,
+                  AppColors.primary,
                   Icons.add_circle_outline,
                   () => _showTransactionDetail('income'),
                 ),
@@ -819,7 +1181,7 @@ class _FinancePageState extends State<FinancePage> {
               ),
             ],
           ),
-          backgroundColor: type == 'income' ? Colors.green : Colors.red,
+          backgroundColor: type == 'income' ? AppColors.primary : Colors.red,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
           shape: RoundedRectangleBorder(
@@ -898,11 +1260,11 @@ class _FinancePageState extends State<FinancePage> {
                   ),
                 );
               },
-              child: const Text(
+              child: Text(
                 'Lihat Semua',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.green,
+                  color: AppColors.primary,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -1097,12 +1459,14 @@ class _FinancePageState extends State<FinancePage> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: isIncome ? Colors.green.shade50 : Colors.orange.shade50,
+                color: isIncome
+                    ? AppColors.primary.withOpacity(0.05)
+                    : Colors.orange.shade50,
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Icon(
                 isIncome ? Icons.trending_up : Icons.trending_down,
-                color: isIncome ? Colors.green : Colors.orange,
+                color: isIncome ? AppColors.primary : Colors.orange,
                 size: 24,
               ),
             ),
@@ -1176,7 +1540,7 @@ class _FinancePageState extends State<FinancePage> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: isIncome ? Colors.green : Colors.orange,
+                    color: isIncome ? AppColors.primary : Colors.orange,
                   ),
                 ),
                 const SizedBox(height: 4),

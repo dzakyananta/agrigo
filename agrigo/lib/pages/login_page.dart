@@ -1,47 +1,70 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // ADD THIS IMPORT
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firebase_service.dart';
-import '../screens/api_test_screen.dart';
+import '../services/user_data_store.dart';
+import '../services/chat_session.dart';
 import 'dashboard_page.dart';
 import 'register_page.dart';
 import 'forgot_password_page.dart';
 
-// Custom painter for top-left green circle
-class TopLeftCirclePainter extends CustomPainter {
+// Painter latar belakang hijau bagian atas
+class TopBackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     Paint paint = Paint()
-      ..color = const Color(0xFF3AA02F)
+      ..color = const Color(0xFF3CB043)
       ..style = PaintingStyle.fill;
 
-    // Draw large circle positioned at top-left corner
-    // Circle center is outside viewport to create partial circle effect
-    canvas.drawCircle(
-      Offset(-size.width * 0.2, size.height * 0.25), // Position at top-left
-      size.width * 0.65, // Large radius to cover "Login" text area
-      paint,
+    Path path = Path();
+    path.moveTo(0, 0);
+    path.lineTo(size.width * 0.45, 0);
+    path.quadraticBezierTo(
+      size.width * 0.5,
+      size.height * 0.22,
+      size.width * 0.1,
+      size.height * 0.32,
     );
+    path.quadraticBezierTo(
+      0,
+      size.height * 0.35,
+      0,
+      size.height * 0.42,
+    );
+    path.lineTo(0, 0);
+    path.close();
+    canvas.drawPath(path, paint);
   }
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
 
-// Custom painter for bottom-right green circle
-class BottomRightCirclePainter extends CustomPainter {
+// Painter latar belakang hijau bagian bawah
+class BottomBackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     Paint paint = Paint()
-      ..color = const Color(0xFF2E8B25)
+      ..color = const Color(0xFF3CB043)
       ..style = PaintingStyle.fill;
 
-    // Draw large circle positioned at bottom-right corner
-    // Circle center is outside viewport to create partial circle effect
-    canvas.drawCircle(
-      Offset(size.width * 1.2, size.height * 0.75), // Position at bottom-right
-      size.width * 0.65, // Large radius matching top circle
-      paint,
+    Path path = Path();
+    path.moveTo(size.width, size.height);
+    path.lineTo(size.width * 0.5, size.height);
+    path.quadraticBezierTo(
+      size.width * 0.6,
+      size.height * 0.88,
+      size.width * 0.88,
+      size.height * 0.85,
     );
+    path.quadraticBezierTo(
+      size.width,
+      size.height * 0.82,
+      size.width,
+      size.height * 0.72,
+    );
+    path.lineTo(size.width, size.height);
+    path.close();
+    canvas.drawPath(path, paint);
   }
 
   @override
@@ -69,369 +92,89 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  // Email/Password Login - ENHANCED with better error handling
   Future<void> _handleEmailLogin() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
-
     try {
-      print('🔵 Attempting login with: ${_emailController.text.trim()}');
-      
-      // STEP 1: Login (will throw error if failed)
       await FirebaseService.loginWithEmail(
         _emailController.text.trim(),
         _passwordController.text,
       );
-
-      print('🟢 Login successful!');
-
-      // STEP 2: Get current user ID WITHOUT accessing credential.user
       final currentUserId = FirebaseService.userId;
-      
-      if (currentUserId != null && mounted) {
-        print('🔵 Fetching user data from Firestore...');
+        if (currentUserId != null && mounted) {
         final userDoc = await FirebaseService.getUser(currentUserId);
-        String userName = 'User';
+        String userName = userDoc.exists
+          ? (userDoc.data() as Map<String, dynamic>)['name'] ?? 'User'
+          : 'User';
 
-        if (userDoc.exists) {
-          final userData = userDoc.data() as Map<String, dynamic>;
-          userName = userData['name'] ?? 'User';
-          print('🟢 User data found: $userName');
-        } else {
-          // Auto-create Firestore document for existing Firebase Auth users
-          print('⚠️ User document not found in Firestore - creating now...');
-          final currentUser = FirebaseService.currentUser;
-          await FirebaseService.createUser(
-            userId: currentUserId,
-            name: currentUser?.displayName ?? 'User',
-            email: currentUser?.email ?? _emailController.text.trim(),
-            phone: currentUser?.phoneNumber ?? '',
-            region: '',
-          );
-          userName = currentUser?.displayName ?? 'User';
-          print('✅ User document created with name: $userName');
-        }
+        // Load per-account data (chat messages, schedules, etc.) into memory
+        // so each user has their own stored app data. If no data exists,
+        // the store will return empty structures.
+        final loadedMessages = await UserDataStore.instance
+          .loadChatMessages(currentUserId);
+        ChatSession.instance.clear();
+        ChatSession.instance.messages.addAll(loadedMessages);
 
-        print('🔵 Navigating to Dashboard...');
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => DashboardPage(userName: userName),
-          ),
-        );
-
-        print('✅ Navigation complete');
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('✅ Login berhasil! Selamat datang $userName'),
-            backgroundColor: const Color(0xFF2E8B25),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+            builder: (context) => DashboardPage(userName: userName)));
+        }
     } on FirebaseAuthException catch (e) {
-      print('🔴 FirebaseAuthException: ${e.code} - ${e.message}');
-      String errorMessage = 'Login gagal';
-
-      if (e.code == 'user-not-found') {
-        errorMessage = '❌ Email tidak terdaftar.\n\nEmail ini mungkin terdaftar dengan provider lain (Google/Facebook).';
-      } else if (e.code == 'wrong-password') {
-        errorMessage = '❌ Password salah.\n\nSilakan coba lagi atau gunakan "Lupa Password".';
-      } else if (e.code == 'invalid-email') {
-        errorMessage = '❌ Format email tidak valid';
-      } else if (e.code == 'invalid-credential') {
-        errorMessage = '❌ Email atau password salah.\n\nJika Anda mendaftar dengan Google/Facebook, silakan login dengan provider tersebut.';
-      } else {
-        errorMessage = '❌ ${e.message}';
-      }
-
       if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Login Gagal'),
-            content: Text(errorMessage),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      print('🔴 Unexpected error: $e');
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Error'),
-            content: Text('Terjadi kesalahan:\n\n$e'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  // Google Login - FIXED with Pigeon error suppression
-  Future<void> _handleGoogleLogin() async {
-    setState(() => _isLoading = true);
-
-    try {
-      print('🔵 Starting Google Sign-In...');
-      
-      // Call Google Sign-In with error suppression
-      try {
-        await FirebaseService.signInWithGoogle();
-      } catch (e) {
-        // Check if it's just Pigeon serialization error (auth actually succeeded)
-        if (e.toString().contains('PigeonUserDetails') || 
-            e.toString().contains('is not a subtype')) {
-          await Future.delayed(Duration(milliseconds: 100));
-          if (FirebaseService.currentUser == null) {
-            // If no user after error, it's real error
-            rethrow;
-          }
-          print('✅ Google Sign-In succeeded despite Pigeon error');
-        } else {
-          // Real error, rethrow
-          rethrow;
-        }
-      }
-
-      final currentUserId = FirebaseService.userId;
-      final currentUser = FirebaseService.currentUser;
-      
-      if (currentUserId != null && currentUser != null && mounted) {
-        print('🔵 Fetching user data from Firestore...');
-        print('🔵 User ID: $currentUserId');
-        print('🔵 User Email: ${currentUser.email}');
-        print('🔵 User DisplayName: ${currentUser.displayName}');
-        
-        final userDoc = await FirebaseService.getUser(currentUserId);
-        print('🔵 userDoc.exists: ${userDoc.exists}');
-        
-        String userName = 'User';
-
-        if (userDoc.exists) {
-          final userData = userDoc.data() as Map<String, dynamic>;
-          userName = userData['name'] ?? 'User';
-          print('🟢 User data found in Firestore:');
-          print('   - name: ${userData['name']}');
-          print('   - email: ${userData['email']}');
-          print('   - phone: ${userData['phone']}');
-          print('   - region: ${userData['region']}');
-        } else {
-          // User document doesn't exist, create it NOW
-          print('🔵 User document NOT EXISTS in Firestore, creating NOW...');
-          try {
-            await FirebaseService.createUser(
-              userId: currentUserId,
-              name: currentUser.displayName ?? 'Google User',
-              email: currentUser.email ?? '',
-              phone: '',
-              region: '',
-            );
-            userName = currentUser.displayName ?? 'Google User';
-            print('✅ User document created successfully!');
-            print('   - Created with name: $userName');
-            print('   - Created with email: ${currentUser.email}');
-          } catch (createError) {
-            print('🔴 ERROR creating user document: $createError');
-            rethrow;
-          }
-        }
-
-        print('🔵 Navigating to Dashboard...');
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DashboardPage(userName: userName),
-          ),
-        );
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('✅ Login Google berhasil! Selamat datang $userName'),
-            backgroundColor: const Color(0xFF2E8B25),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      print('🔴 Google Sign-In error: $e');
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Google Login Gagal'),
-            content: Text('Terjadi kesalahan saat login dengan Google:\n\n$e'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  // Facebook Login - FIXED with Pigeon error suppression
-  Future<void> _handleFacebookLogin() async {
-    setState(() => _isLoading = true);
-
-    try {
-      print('🔵 Starting Facebook Sign-In...');
-      
-      // Call Facebook Sign-In with error suppression
-      try {
-        await FirebaseService.signInWithFacebook();
-      } catch (e) {
-        // Check if it's just Pigeon serialization error (auth actually succeeded)
-        if (e.toString().contains('PigeonUserDetails') || 
-            e.toString().contains('is not a subtype')) {
-          await Future.delayed(Duration(milliseconds: 100));
-          if (FirebaseService.currentUser == null) {
-            // If no user after error, it's real error
-            rethrow;
-          }
-          print('✅ Facebook Sign-In succeeded despite Pigeon error');
-        } else {
-          // Real error, rethrow
-          rethrow;
-        }
-      }
-
-      final currentUserId = FirebaseService.userId;
-      final currentUser = FirebaseService.currentUser;
-      
-      if (currentUserId != null && currentUser != null && mounted) {
-        print('🔵 Fetching user data from Firestore...');
-        final userDoc = await FirebaseService.getUser(currentUserId);
-        String userName = 'User';
-
-        if (userDoc.exists) {
-          final userData = userDoc.data() as Map<String, dynamic>;
-          userName = userData['name'] ?? 'User';
-          print('🟢 User data found: $userName');
-        } else {
-          // User document doesn't exist, create it NOW
-          print('🔵 User document not found, creating...');
-          await FirebaseService.createUser(
-            userId: currentUserId,
-            name: currentUser.displayName ?? 'Facebook User',
-            email: currentUser.email ?? '',
-            phone: '',
-            region: '',
+        // Map common FirebaseAuth error codes to Indonesian messages
+        if (e.code == 'user-not-found') {
+          _showLoginErrorDialog(
+            title: 'Pendaftaran Diperlukan',
+            message:
+                'akun anda belum terdaftar harap daftar akun terlebih dahulu',
           );
-          userName = currentUser.displayName ?? 'Facebook User';
-          print('✅ User document created successfully!');
+        } else if (e.code == 'wrong-password') {
+          _showLoginErrorDialog(
+            title: 'Login Gagal',
+            message: 'username atau password anda salah',
+          );
+        } else if (e.code == 'invalid-email') {
+          _showLoginErrorDialog(
+            title: 'Email Tidak Valid',
+            message: 'Format email tidak valid. Periksa kembali alamat email Anda.',
+          );
+        } else if (e.code == 'user-disabled') {
+          _showLoginErrorDialog(
+            title: 'Akun Dinonaktifkan',
+            message: 'Akun ini telah dinonaktifkan. Hubungi dukungan.',
+          );
+        } else {
+          // For any other FirebaseAuthException code, show a generic Indonesian message
+          _showLoginErrorDialog(
+            title: 'Login Gagal',
+            message: 'Terjadi kesalahan saat login. Silakan coba lagi.',
+          );
         }
-
-        print('🔵 Navigating to Dashboard...');
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DashboardPage(userName: userName),
-          ),
-        );
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('✅ Login Facebook berhasil! Selamat datang $userName'),
-            backgroundColor: const Color(0xFF2E8B25),
-            duration: const Duration(seconds: 2),
-          ),
-        );
       }
     } catch (e) {
-      print('🔴 Facebook Sign-In error: $e');
+      // Catch-all for non-Firebase exceptions (e.g., recaptcha or network issues)
       if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Facebook Login Gagal'),
-            content: Text('Terjadi kesalahan saat login dengan Facebook:\n\n$e'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
+        _showLoginErrorDialog(
+          title: 'Login Gagal',
+          message: 'Terjadi kesalahan saat login. Silakan coba lagi.',
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _handleForgotPassword() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
-    );
-  }
-
-  void _handleRegister() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const RegisterPage()),
-    );
-  }
-
-  Widget _buildCredentialItem(String role, String email, String password) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 60,
-            child: Text(
-              '$role:',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ),
-          Expanded(
-            child: GestureDetector(
-              onTap: () {
-                _emailController.text = email;
-                _passwordController.text = password;
-              },
-              child: Text(
-                '$email / $password',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.blue.shade600,
-                  decoration: TextDecoration.underline,
-                ),
-              ),
-            ),
+  void _showLoginErrorDialog({required String title, required String message}) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
           ),
         ],
       ),
@@ -440,429 +183,208 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final isDesktop = size.width > 600;
-
     return Scaffold(
       backgroundColor: Colors.white,
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-      ),
-      body: Center(
-        child: Container(
-          width: isDesktop ? 400 : double.infinity,
-          height: isDesktop ? 800 : double.infinity,
-          child: Stack(
-            children: [
-              // Top-left green circle background
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: SizedBox(
-                  height: isDesktop ? 300 : size.height * 0.4,
-                  child: CustomPaint(
-                    painter: TopLeftCirclePainter(),
-                    size: Size(
-                      size.width,
-                      isDesktop ? 300 : size.height * 0.4,
-                    ),
-                  ),
-                ),
-              ),
-
-              // Bottom-right green circle background
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: SizedBox(
-                  height: isDesktop ? 200 : size.height * 0.3,
-                  child: CustomPaint(
-                    painter: BottomRightCirclePainter(),
-                    size: Size(size.width, isDesktop ? 200 : size.height * 0.3),
-                  ),
-                ),
-              ),
-
-              SafeArea(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 30),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(height: isDesktop ? 60 : size.height * 0.08),
-
-                        // Login title positioned in green circle area
-                        Padding(
-                          padding: const EdgeInsets.only(left: 10),
-                          child: const Text(
-                            'Login',
-                            style: TextStyle(
-                              fontSize: 40,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                        ),
-
-                        SizedBox(height: isDesktop ? 100 : size.height * 0.15),
-
-                        // Email field
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: const Color(0xFF2E8B25),
-                              width: 2,
-                            ),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 4,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: TextFormField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: const InputDecoration(
-                              hintText: 'Email atau No. Handphone',
-                              prefixIcon: Icon(
-                                Icons.person_outline,
-                                color: Color(0xFF2E8B25),
-                              ),
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 16,
-                              ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Email atau No. Handphone tidak boleh kosong';
-                              }
-                              // Check if it's email format
-                              bool isEmail = RegExp(
-                                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                              ).hasMatch(value);
-                              // Check if it's Indonesian phone format
-                              bool isPhone = RegExp(r'^(\+62|62|0)[0-9]{9,13}$')
-                                  .hasMatch(
-                                    value.replaceAll(RegExp(r'[\s-]'), ''),
-                                  );
-
-                              if (!isEmail && !isPhone) {
-                                return 'Format email atau nomor handphone tidak valid';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Password field
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: const Color(0xFF2E8B25),
-                              width: 2,
-                            ),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 4,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: TextFormField(
-                            controller: _passwordController,
-                            obscureText: !_obscurePassword,
-                            decoration: InputDecoration(
-                              hintText: 'Ketik password anda',
-                              prefixIcon: const Icon(
-                                Icons.lock_outline,
-                                color: Color(0xFF2E8B25),
-                              ),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility
-                                      : Icons.visibility_off,
-                                  color: const Color(0xFF2E8B25),
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscurePassword = !_obscurePassword;
-                                  });
-                                },
-                              ),
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 16,
-                              ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Password tidak boleh kosong';
-                              }
-                              if (value.length < 6) {
-                                return 'Password minimal 6 karakter';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Forgot password
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: _handleForgotPassword,
-                            child: const Text(
-                              'Lupa Password?',
-                              style: TextStyle(
-                                color: Colors.blue,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 30),
-
-                        // Login button
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : _handleEmailLogin,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2E8B25),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 4,
-                            ),
-                            child: _isLoading
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
-                                      ),
-                                    ),
-                                  )
-                                : const Text(
-                                    'Masuk',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 30),
-
-                        // Divider
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Container(
-                                height: 1,
-                                color: Colors.grey[300],
-                              ),
-                            ),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 16),
-                              child: Text(
-                                'Atau masuk dengan',
+      resizeToAvoidBottomInset: false,
+      body: Stack(
+        children: [
+          Positioned.fill(child: CustomPaint(painter: TopBackgroundPainter())),
+          Positioned.fill(
+              child: CustomPaint(painter: BottomBackgroundPainter())),
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints:
+                        BoxConstraints(minHeight: constraints.maxHeight),
+                    child: IntrinsicHeight(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 30),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 50),
+                              const Text(
+                                'Masuk',
                                 style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 14,
+                                    fontSize: 34,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white),
+                              ),
+                              const SizedBox(height: 140),
+
+                              _buildInputBox(
+                                child: TextFormField(
+                                  controller: _emailController,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Ketik email anda',
+                                    prefixIcon: Icon(Icons.email_outlined,
+                                        color: Colors.black),
+                                    border: InputBorder.none,
+                                  ),
                                 ),
                               ),
-                            ),
-                            Expanded(
-                              child: Container(
-                                height: 1,
-                                color: Colors.grey[300],
+
+                              const SizedBox(height: 15),
+
+                              _buildInputBox(
+                                child: TextFormField(
+                                  controller: _passwordController,
+                                  obscureText: _obscurePassword,
+                                  decoration: InputDecoration(
+                                    hintText: 'Ketik kata sandi anda',
+                                    prefixIcon: const Icon(Icons.lock_outline,
+                                        color: Colors.black),
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                          _obscurePassword
+                                              ? Icons.visibility_off
+                                              : Icons.visibility,
+                                          color: Colors.black),
+                                      onPressed: () => setState(() =>
+                                          _obscurePassword = !_obscurePassword),
+                                    ),
+                                    border: InputBorder.none,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
 
-                        const SizedBox(height: 20),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              const ForgotPasswordPage())),
+                                  child: const Text('Lupa Password?',
+                                      style: TextStyle(
+                                          color: Color(0xFF4A90E2),
+                                          fontSize: 13)),
+                                ),
+                              ),
 
-                        // Social login buttons - NOW ACTIVE!
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // Google button - ACTIVE
-                            GestureDetector(
-                              onTap: _isLoading ? null : _handleGoogleLogin,
-                              child: Container(
-                                width: 50,
+                              const SizedBox(height: 10),
+
+                              SizedBox(
+                                width: double.infinity,
                                 height: 50,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.grey[300]!,
-                                    width: 1,
+                                child: ElevatedButton(
+                                  onPressed:
+                                      _isLoading ? null : _handleEmailLogin,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF3CB043),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12)),
                                   ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: _isLoading ? Colors.black12 : Colors.black26,
-                                      blurRadius: 4,
-                                      offset: Offset(0, 2),
-                                    ),
-                                  ],
+                                  child: _isLoading
+                                      ? const SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white))
+                                      : const Text('Masuk',
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16)),
                                 ),
-                                child: Center(
-                                  child: Text(
-                                    'G',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: _isLoading ? Colors.red.shade300 : Colors.red,
-                                    ),
+                              ),
+
+                              const SizedBox(height: 30),
+
+                              Row(
+                                children: [
+                                  Expanded(
+                                      child: Divider(color: Colors.grey[400])),
+                                  const Padding(
+                                      padding:
+                                          EdgeInsets.symmetric(horizontal: 10),
+                                      child: Text('atau masuk dengan',
+                                          style: TextStyle(
+                                              color: Colors.grey,
+                                              fontSize: 12))),
+                                  Expanded(
+                                      child: Divider(color: Colors.grey[400])),
+                                ],
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _buildSocialIcon(
+                                      Icons.g_mobiledata, Colors.red),
+                                  const SizedBox(width: 20),
+                                  _buildSocialIcon(Icons.facebook, Colors.blue),
+                                ],
+                              ),
+
+                              // Menambahkan jarak statis agar teks naik ke atas
+                              const SizedBox(height: 60),
+
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Text('Belum punya akun? ',
+                                      style: TextStyle(
+                                          fontSize: 13, color: Colors.black)),
+                                  GestureDetector(
+                                    onTap: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (context) =>
+                                                const RegisterPage())),
+                                    child: const Text('Daftar Sekarang!',
+                                        style: TextStyle(
+                                            color: Color(0xFF4A90E2),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13)),
                                   ),
-                                ),
+                                ],
                               ),
-                            ),
 
-                            // Facebook button temporarily disabled
-                            // const SizedBox(width: 20),
-                            // GestureDetector(
-                            //   onTap: _isLoading ? null : _handleFacebookLogin,
-                            //   child: Container(
-                            //     width: 50,
-                            //     height: 50,
-                            //     decoration: BoxDecoration(
-                            //       color: Colors.white,
-                            //       shape: BoxShape.circle,
-                            //       border: Border.all(
-                            //         color: Colors.grey[300]!,
-                            //         width: 1,
-                            //       ),
-                            //       boxShadow: [
-                            //         BoxShadow(
-                            //           color: _isLoading ? Colors.black12 : Colors.black26,
-                            //           blurRadius: 4,
-                            //           offset: Offset(0, 2),
-                            //         ),
-                            //       ],
-                            //     ),
-                            //     child: Center(
-                            //       child: Text(
-                            //         'f',
-                            //         style: TextStyle(
-                            //           fontSize: 24,
-                            //           fontWeight: FontWeight.bold,
-                            //           color: _isLoading ? Colors.blue.shade300 : Colors.blue,
-                            //         ),
-                            //       ),
-                            //     ),
-                            //   ),
-                            // ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 30),
-
-                        // Register link
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text(
-                              'Belum punya akun? ',
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 14,
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: _handleRegister,
-                              child: const Text(
-                                'Daftar Sekarang!',
-                                style: TextStyle(
-                                  color: Colors.blue,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Test API Button
-                        Center(
-                          child: TextButton.icon(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const ApiTestScreen(),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.developer_mode, size: 16),
-                            label: const Text(
-                              'Test Laravel API Connection',
-                              style: TextStyle(fontSize: 12),
-                            ),
-                            style: TextButton.styleFrom(
-                              foregroundColor: Colors.grey,
-                            ),
+                              // Memberikan padding bawah agar tidak terlalu mepet dasar layar
+                              const SizedBox(height: 40),
+                            ],
                           ),
                         ),
-
-                        const SizedBox(height: 10),
-
-                        // Bottom indicator
-                        Center(
-                          child: Container(
-                            width: 140,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: Colors.black12,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-                      ],
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ],
+                );
+              },
+            ),
           ),
-        ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildInputBox({required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF3CB043), width: 1.5),
+      ),
+      child: child,
+    );
+  }
+
+  Widget _buildSocialIcon(IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+          shape: BoxShape.circle, border: Border.all(color: Colors.grey[300]!)),
+      child: Icon(icon, size: 35, color: color),
     );
   }
 }

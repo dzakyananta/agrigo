@@ -1,0 +1,35 @@
+# Flutter/Dart
+.dart_tool/
+.packages
+.pub/
+pubspec.lock
+/.idea/
+.vscode/
+*.iml
+
+# Ignore build outputs anywhere in the tree
+**/build/
+**/android/**/build/
+**/ios/**/build/
+**/android/app/build/
+
+# Android specific
+android/.gradle/
+android/local.properties
+*.apk
+*.ap_
+*.aab
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+
+# Generated files
+**/GeneratedPluginRegistrant.*
+
+# Misc
+*.log
+*.keystore
+pubspec.lock

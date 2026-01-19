@@ -6,33 +6,33 @@ class ApiService {
   // Multiple base URL options - pilih yang sesuai:
   // 1. Localhost (untuk emulator Android)
   static const String baseUrlLocalhost = 'http://10.0.2.2:8000/api';
-  
+
   // 2. Network IP (untuk physical device di WiFi yang sama)
   static const String baseUrlNetwork = 'http://192.168.1.14:8000/api';
-  
+
   // 3. Ngrok (untuk testing di device manapun)
   static const String baseUrlNgrok = 'https://YOUR_NGROK_URL/api';
-  
+
   // ACTIVE BASE URL - Ganti sesuai kebutuhan
   static const String baseUrl = baseUrlLocalhost; // Default: emulator
-  
+
   // ============= TOKEN MANAGEMENT =============
-  
+
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('auth_token');
   }
-  
+
   static Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('auth_token', token);
   }
-  
+
   static Future<void> clearToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
   }
-  
+
   static Future<Map<String, String>> getHeaders() async {
     final token = await getToken();
     return {
@@ -41,10 +41,11 @@ class ApiService {
       if (token != null) 'Authorization': 'Bearer $token',
     };
   }
-  
+
   // ============= AUTHENTICATION =============
-  
-  static Future<Map<String, dynamic>> login(String email, String password) async {
+
+  static Future<Map<String, dynamic>> login(
+      String email, String password) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/login'),
@@ -67,7 +68,7 @@ class ApiService {
       throw Exception('Error: $e');
     }
   }
-  
+
   static Future<Map<String, dynamic>> register({
     required String name,
     required String email,
@@ -98,7 +99,7 @@ class ApiService {
       throw Exception('Error: $e');
     }
   }
-  
+
   static Future<Map<String, dynamic>> getUser() async {
     try {
       final headers = await getHeaders();
@@ -118,7 +119,7 @@ class ApiService {
       throw Exception('Error: $e');
     }
   }
-  
+
   static Future<void> logout() async {
     try {
       final headers = await getHeaders();
@@ -132,9 +133,9 @@ class ApiService {
       await clearToken();
     }
   }
-  
+
   // ============= SCHEDULES =============
-  
+
   static Future<List<dynamic>> getSchedules() async {
     try {
       final headers = await getHeaders();
@@ -154,7 +155,7 @@ class ApiService {
       throw Exception('Error: $e');
     }
   }
-  
+
   static Future<Map<String, dynamic>> createSchedule({
     required int commodityId,
     required String startDate,
@@ -185,7 +186,7 @@ class ApiService {
       throw Exception('Error: $e');
     }
   }
-  
+
   static Future<void> deleteSchedule(int id) async {
     try {
       final headers = await getHeaders();
@@ -202,16 +203,15 @@ class ApiService {
       throw Exception('Error: $e');
     }
   }
-  
+
   // ============= TRANSACTIONS =============
-  
+
   static Future<List<dynamic>> getTransactions() async {
     try {
       final headers = await getHeaders();
-      final response = await http.get(
-        Uri.parse('$baseUrl/transactions'),
-        headers: headers,
-      );
+      final response = await http
+          .get(Uri.parse('$baseUrl/transactions'), headers: headers)
+          .timeout(const Duration(seconds: 8));
 
       final data = jsonDecode(response.body);
 
@@ -224,14 +224,13 @@ class ApiService {
       throw Exception('Error: $e');
     }
   }
-  
+
   static Future<Map<String, dynamic>> getTransactionSummary() async {
     try {
       final headers = await getHeaders();
-      final response = await http.get(
-        Uri.parse('$baseUrl/transactions/summary'),
-        headers: headers,
-      );
+      final response = await http
+          .get(Uri.parse('$baseUrl/transactions/summary'), headers: headers)
+          .timeout(const Duration(seconds: 8));
 
       final data = jsonDecode(response.body);
 
@@ -244,7 +243,7 @@ class ApiService {
       throw Exception('Error: $e');
     }
   }
-  
+
   static Future<Map<String, dynamic>> createTransaction({
     required String type, // 'income' or 'expense'
     required double amount,
@@ -277,16 +276,15 @@ class ApiService {
       throw Exception('Error: $e');
     }
   }
-  
+
   // ============= COMMODITIES =============
-  
+
   static Future<List<dynamic>> getCommodities() async {
     try {
       final headers = await getHeaders();
-      final response = await http.get(
-        Uri.parse('$baseUrl/commodities'),
-        headers: headers,
-      );
+      final response = await http
+          .get(Uri.parse('$baseUrl/commodities'), headers: headers)
+          .timeout(const Duration(seconds: 8));
 
       final data = jsonDecode(response.body);
 
@@ -299,9 +297,9 @@ class ApiService {
       throw Exception('Error: $e');
     }
   }
-  
+
   // ============= WEATHER =============
-  
+
   static Future<Map<String, dynamic>> getWeather() async {
     try {
       final headers = await getHeaders();

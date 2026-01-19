@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/user_service.dart';
+import '../services/firebase_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class EditProfilePage extends StatefulWidget {
   final String userName;
@@ -49,30 +51,102 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   Future<void> _saveProfile() async {
     if (_formKey.currentState!.validate()) {
-      // Save to SharedPreferences
-      await UserService.saveUserProfile(
-        name: _nameController.text,
-        email: _emailController.text,
-        phone: _phoneController.text,
-        location: _locationController.text,
-      );
+      // Update Firebase Auth (email & password) if user is signed in
+      try {
+        final user = FirebaseService.currentUser;
+        if (user != null) {
+          // Update email if changed
+          final newEmail = _emailController.text.trim();
+          if (newEmail.isNotEmpty && newEmail != user.email) {
+            try {
+              await user.updateEmail(newEmail);
+            } catch (e) {
+              // Email update may require recent login
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Gagal memperbarui email: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
 
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profil berhasil disimpan!'),
-          backgroundColor: Color(0xFF2E8B25),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+          // Update password if provided
+          final newPassword = _passwordController.text.trim();
+          if (newPassword.isNotEmpty) {
+            try {
+              await user.updatePassword(newPassword);
+            } catch (e) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Gagal memperbarui password: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        }
 
-      // Return to previous page with updated data
-      Navigator.pop(context, {
-        'name': _nameController.text,
-        'email': _emailController.text,
-        'phone': _phoneController.text,
-        'location': _locationController.text,
-      });
+        // Update Firestore profile
+        final uid = FirebaseService.userId;
+        if (uid != null) {
+          await FirebaseService.updateUserProfile(
+            userId: uid,
+            name: _nameController.text.trim(),
+            phone: _phoneController.text.trim(),
+            region: _locationController.text.trim(),
+            email: _emailController.text.trim(),
+          );
+        }
+
+        // Save to local prefs
+        await UserService.saveUserProfile(
+          name: _nameController.text.trim(),
+          email: _emailController.text.trim(),
+          phone: _phoneController.text.trim(),
+          location: _locationController.text.trim(),
+        );
+
+        // Show success dialog (popup) and return when user confirms
+        final resultData = {
+          'name': _nameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'phone': _phoneController.text.trim(),
+          'location': _locationController.text.trim(),
+        };
+
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text('Berhasil'),
+            content: const Text('Profil berhasil disimpan.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+
+        Navigator.pop(context, resultData);
+      } catch (e) {
+        // Show error dialog so user sees the popup on failure too
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: true,
+          builder: (context) => AlertDialog(
+            title: const Text('Gagal'),
+            content: Text('Terjadi kesalahan saat menyimpan: $e'),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK')),
+            ],
+          ),
+        );
+      }
     }
   }
 
@@ -93,7 +167,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         validator: validator,
         decoration: InputDecoration(
           hintText: hintText,
-          prefixIcon: Icon(icon, color: const Color(0xFF2E8B25)),
+          prefixIcon: Icon(icon, color: const Color(0xFF3CB043)),
           filled: true,
           fillColor: Colors.grey[100],
           border: OutlineInputBorder(
@@ -102,7 +176,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF2E8B25), width: 2),
+            borderSide: const BorderSide(color: Color(0xFF3CB043), width: 2),
           ),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
@@ -116,7 +190,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF2E8B25),
+      backgroundColor: const Color(0xFF3CB043),
       body: SafeArea(
         child: Column(
           children: [
@@ -256,7 +330,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           child: ElevatedButton(
                             onPressed: _saveProfile,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2E8B25),
+                              backgroundColor: const Color(0xFF3CB043),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),

@@ -6,6 +6,8 @@ import '../models/notification_item.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // Add this
 import 'package:cloud_firestore/cloud_firestore.dart'; // Add this
 import 'schedule_service.dart';
+import 'firebase_service.dart';
+import 'user_data_store.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -85,17 +87,29 @@ class NotificationService {
   static const String _lastCheckKey = 'last_notification_check';
 
   static Future<List<NotificationItem>> getNotifications() async {
-    final prefs = await SharedPreferences.getInstance();
-    final notificationsJson = prefs.getStringList(_notificationKey) ?? [];
+    final uid = FirebaseService.userId;
+    List<dynamic> stored = [];
+    if (uid != null) {
+      stored = await UserDataStore.instance.loadList(uid, 'notifications');
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      stored = prefs
+              .getStringList(_notificationKey)
+              ?.map((s) => jsonDecode(s))
+              .toList() ??
+          [];
+    }
 
-    return notificationsJson
-        .map((json) => NotificationItem.fromMap(jsonDecode(json)))
-        .toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final list = stored
+        .map((e) => NotificationItem.fromMap(
+            e is String ? jsonDecode(e) : e as Map<String, dynamic>))
+        .toList();
+    list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return list;
   }
 
   static Future<void> saveNotification(NotificationItem notification) async {
-    final prefs = await SharedPreferences.getInstance();
+    final uid = FirebaseService.userId;
     final notifications = await getNotifications();
     notifications.removeWhere((n) => n.id == notification.id);
     notifications.add(notification);
@@ -105,8 +119,15 @@ class NotificationService {
       notifications.removeRange(50, notifications.length);
     }
 
-    final notificationsJson = notifications.map((n) => jsonEncode(n.toMap())).toList();
-    await prefs.setStringList(_notificationKey, notificationsJson);
+    final notificationsJson = notifications.map((n) => n.toMap()).toList();
+    if (uid != null) {
+      await UserDataStore.instance
+          .saveList(uid, 'notifications', notificationsJson);
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_notificationKey,
+          notifications.map((n) => jsonEncode(n.toMap())).toList());
+    }
   }
 
   static Future<void> markAsRead(String id) async {
@@ -114,7 +135,8 @@ class NotificationService {
     final index = notifications.indexWhere((n) => n.id == id);
 
     if (index != -1) {
-      final updatedNotification = notifications[index].copyWith(isUnread: false);
+      final updatedNotification =
+          notifications[index].copyWith(isUnread: false);
       await saveNotification(updatedNotification);
     }
   }
@@ -129,12 +151,19 @@ class NotificationService {
   }
 
   static Future<void> deleteNotification(String id) async {
-    final prefs = await SharedPreferences.getInstance();
+    final uid = FirebaseService.userId;
     final notifications = await getNotifications();
     notifications.removeWhere((n) => n.id == id);
 
-    final notificationsJson = notifications.map((n) => jsonEncode(n.toMap())).toList();
-    await prefs.setStringList(_notificationKey, notificationsJson);
+    final notificationsJson = notifications.map((n) => n.toMap()).toList();
+    if (uid != null) {
+      await UserDataStore.instance
+          .saveList(uid, 'notifications', notificationsJson);
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_notificationKey,
+          notifications.map((n) => jsonEncode(n.toMap())).toList());
+    }
   }
 
   static Future<int> getUnreadCount() async {
@@ -143,8 +172,10 @@ class NotificationService {
   }
 
   static Future<void> generateSmartNotifications({bool force = false}) async {
+    final uid = FirebaseService.userId;
     final prefs = await SharedPreferences.getInstance();
-    final lastCheck = prefs.getInt(_lastCheckKey) ?? 0;
+    final lastCheckKey = uid != null ? '$_lastCheckKey\$${uid}' : _lastCheckKey;
+    final lastCheck = prefs.getInt(lastCheckKey) ?? 0;
     final lastCheckDate = DateTime.fromMillisecondsSinceEpoch(lastCheck);
     final now = DateTime.now();
 
@@ -156,13 +187,13 @@ class NotificationService {
     }
 
     final schedules = await ScheduleService.getSchedules();
-    final activeSchedules = schedules.where((s) => s.status == 'Sedang Berlangsung').toList();
+    final activeSchedules =
+        schedules.where((s) => s.status == 'Sedang Berlangsung').toList();
 
     for (var schedule in activeSchedules) {
       await _generateScheduleNotifications(schedule);
     }
-
-    await prefs.setInt(_lastCheckKey, now.millisecondsSinceEpoch);
+    await prefs.setInt(lastCheckKey, now.millisecondsSinceEpoch);
   }
 
   static Future<void> _generateScheduleNotifications(Schedule schedule) async {
@@ -173,7 +204,8 @@ class NotificationService {
     if (daysSinceStart == 0) {
       await _createNotification(
         title: 'Penanaman ${schedule.komoditas}',
-        description: 'Hari ini adalah hari penanaman ${schedule.komoditas}. Pastikan tanah sudah siap!',
+        description:
+            'Hari ini adalah hari penanaman ${schedule.komoditas}. Pastikan tanah sudah siap!',
         time: 'Hari ini',
         iconType: 'plant',
         colorType: 'green',
@@ -184,7 +216,8 @@ class NotificationService {
     if (daysUntilEnd == 0) {
       await _createNotification(
         title: 'Panen ${schedule.komoditas}',
-        description: 'Hari ini adalah hari panen ${schedule.komoditas}. Selamat panen!',
+        description:
+            'Hari ini adalah hari panen ${schedule.komoditas}. Selamat panen!',
         time: 'Hari ini',
         iconType: 'harvest',
         colorType: 'green',
@@ -204,7 +237,7 @@ class NotificationService {
     final id = DateTime.now().millisecondsSinceEpoch.toString();
     final notifications = await getNotifications();
     final today = DateTime.now();
-    
+
     final existingToday = notifications.where((n) {
       final nDate = n.createdAt;
       return n.title == title &&

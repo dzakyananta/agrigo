@@ -197,7 +197,8 @@ class _CommodityListPageState extends State<CommodityListPage> {
                                     decoration: BoxDecoration(
                                       color: const Color(
                                         0xFF3AA02F,
-                                      ).withOpacity(0.12),
+                                      )
+                                          .withOpacity(0.12),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: const Icon(

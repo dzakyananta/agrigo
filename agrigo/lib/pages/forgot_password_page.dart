@@ -61,10 +61,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           if (emailSent) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Kode OTP telah dikirim ke email Anda. Silakan cek inbox atau folder spam.'),
-                backgroundColor: Color(0xFF2E8B25),
-                duration: Duration(seconds: 4),
-              ),
+                    content: Text('Kode OTP telah dikirim ke email Anda. Silakan cek inbox atau folder spam.'),
+                    backgroundColor: Color(0xFF3CB043),
+                    duration: Duration(seconds: 4),
+                  ),
             );
 
             // Navigate to VerificationCodePage
@@ -204,7 +204,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               width: 180,
               height: 180,
               decoration: const BoxDecoration(
-                color: Color(0xFF2E8B25),
+                color: Color(0xFF3CB043),
                 shape: BoxShape.circle,
               ),
             ),
@@ -217,7 +217,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               width: 120,
               height: 120,
               decoration: const BoxDecoration(
-                color: Color(0xFF2E8B25),
+                color: Color(0xFF3CB043),
                 shape: BoxShape.circle,
               ),
             ),
@@ -277,7 +277,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: _selectedMethod == 'email'
-                                      ? const Color(0xFF2E8B25)
+                                      ? const Color(0xFF3CB043)
                                       : Colors.grey.shade300,
                                   borderRadius: BorderRadius.circular(25),
                                 ),
@@ -310,7 +310,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: _selectedMethod == 'phone'
-                                      ? const Color(0xFF2E8B25)
+                                      ? const Color(0xFF3CB043)
                                       : Colors.grey.shade300,
                                   borderRadius: BorderRadius.circular(25),
                                 ),
@@ -338,7 +338,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: const Color(0xFF2E8B25),
+                            color: const Color(0xFF3CB043),
                             width: 1,
                           ),
                         ),
@@ -357,7 +357,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                               _selectedMethod == 'email'
                                   ? Icons.email_outlined
                                   : Icons.phone_outlined,
-                              color: Color(0xFF2E8B25),
+                              color: const Color(0xFF3CB043),
                             ),
                             border: InputBorder.none,
                             contentPadding: const EdgeInsets.symmetric(
@@ -403,7 +403,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _handleSendCode,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2E8B25),
+                            backgroundColor: const Color(0xFF3CB043),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -551,7 +551,7 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Kode OTP baru telah dikirim ke email Anda'),
-            backgroundColor: Color(0xFF2E8B25),
+            backgroundColor: Color(0xFF3CB043),
           ),
         );
       } else {
@@ -597,7 +597,7 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message']),
-          backgroundColor: const Color(0xFF2E8B25),
+          backgroundColor: const Color(0xFF3CB043),
         ),
       );
       
@@ -641,9 +641,9 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
               width: 200,
               height: 200,
               decoration: const BoxDecoration(
-                color: Color(0xFF2E8B25),
-                shape: BoxShape.circle,
-              ),
+                        color: Color(0xFF3CB043),
+                        shape: BoxShape.circle,
+                      ),
             ),
           ),
           Positioned(
@@ -653,7 +653,7 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
               width: 150,
               height: 150,
               decoration: const BoxDecoration(
-                color: Color(0xFF2E8B25),
+                color: Color(0xFF3CB043),
                 shape: BoxShape.circle,
               ),
             ),
@@ -704,7 +704,7 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: _controllers[index].text.isNotEmpty
-                                ? const Color(0xFF2E8B25)
+                              ? const Color(0xFF3CB043)
                                 : Colors.grey.withOpacity(0.3),
                             width: 1.5,
                           ),
@@ -777,7 +777,7 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
                           style: TextStyle(
                             fontSize: 14,
                             color: _canResend
-                                ? const Color(0xFF2E8B25)
+                                ? const Color(0xFF3CB043)
                                 : Colors.grey,
                             fontWeight: FontWeight.bold,
                           ),
@@ -795,7 +795,7 @@ class _VerificationCodePageState extends State<VerificationCodePage> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _handleVerification,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2E8B25),
+                        backgroundColor: const Color(0xFF3CB043),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -884,7 +884,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(result['message']),
-                backgroundColor: const Color(0xFF2E8B25),
+                backgroundColor: const Color(0xFF3CB043),
                 duration: const Duration(seconds: 4),
               ),
             );
@@ -951,7 +951,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
               width: 200,
               height: 200,
               decoration: const BoxDecoration(
-                color: Color(0xFF2E8B25),
+                color: Color(0xFF3CB043),
                 shape: BoxShape.circle,
               ),
             ),
@@ -998,7 +998,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: const Color(0xFF2E8B25),
+                            color: const Color(0xFF3CB043),
                             width: 2,
                           ),
                           boxShadow: const [
@@ -1016,14 +1016,14 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                             hintText: 'Kata sandi baru',
                             prefixIcon: const Icon(
                               Icons.lock_outline,
-                              color: Color(0xFF2E8B25),
+                              color: Color(0xFF3CB043),
                             ),
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _isNewPasswordVisible
                                     ? Icons.visibility
                                     : Icons.visibility_off,
-                                color: const Color(0xFF2E8B25),
+                                color: const Color(0xFF3CB043),
                               ),
                               onPressed: () {
                                 setState(() {
@@ -1058,7 +1058,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: const Color(0xFF2E8B25),
+                            color: const Color(0xFF3CB043),
                             width: 2,
                           ),
                           boxShadow: const [
@@ -1076,14 +1076,14 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                             hintText: 'Konfirmasi kata sandi',
                             prefixIcon: const Icon(
                               Icons.lock_outline,
-                              color: Color(0xFF2E8B25),
+                              color: Color(0xFF3CB043),
                             ),
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _isConfirmPasswordVisible
                                     ? Icons.visibility
                                     : Icons.visibility_off,
-                                color: const Color(0xFF2E8B25),
+                                color: const Color(0xFF3CB043),
                               ),
                               onPressed: () {
                                 setState(() {
@@ -1119,7 +1119,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _handleResetPassword,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2E8B25),
+                            backgroundColor: const Color(0xFF3CB043),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),

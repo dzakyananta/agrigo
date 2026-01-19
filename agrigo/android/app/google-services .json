@@ -1,0 +1,92 @@
+{
+  "project_info": {
+    "project_number": "109126013158",
+    "project_id": "agrigo-bddde",
+    "storage_bucket": "agrigo-bddde.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:109126013158:android:fe919807d20d753ed56b27",
+        "android_client_info": {
+          "package_name": "com.example.agrigo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "109126013158-6tpqj29tbo0ghlg9l432vugttvn0dudq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.agrigo",
+            "certificate_hash": "71cf5ce82545efd6d9d78e0734c7fb34d4864c63"
+          }
+        },
+        {
+          "client_id": "109126013158-ubhbo1k0g9jc2ji905s141cpq7ks2qpr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCgiJimf7On6LlSHKXO6XcJKCsGEmDTDtQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "109126013158-ubhbo1k0g9jc2ji905s141cpq7ks2qpr.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "109126013158-agjohvholm9iv8icrlheha8b4j6aoeg9.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.agrigo"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1",
+  "rules_version": "2",
+  "service": {
+    "cloud": {
+      "firestore": {
+        "match": "/databases/{database}/documents",
+        "rules": {
+          "users": {
+            "match": "/users/{userId}",
+            "allow": {
+              "read": "request.auth != null && request.auth.uid == userId",
+              "write": "request.auth != null && request.auth.uid == userId"
+            },
+            "schedules": {
+              "match": "/schedules/{scheduleId}",
+              "allow": {
+                "read": "request.auth != null && request.auth.uid == userId",
+                "write": "request.auth != null && request.auth.uid == userId"
+              }
+            },
+            "transactions": {
+              "match": "/transactions/{transactionId}",
+              "allow": {
+                "read": "request.auth != null && request.auth.uid == userId",
+                "write": "request.auth != null && request.auth.uid == userId"
+              }
+            }
+          },
+          "commodities": {
+            "match": "/commodities/{commodityId}",
+            "allow": {
+              "read": "request.auth != null",
+              "write": "false"
+            }
+          }
+        }
+      }
+    }
+  }
+}

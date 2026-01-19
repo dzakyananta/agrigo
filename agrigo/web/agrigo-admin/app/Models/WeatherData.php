@@ -10,6 +10,7 @@ class WeatherData extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'location',
         'latitude',
         'longitude',
@@ -35,4 +36,15 @@ class WeatherData extends Model
         'pressure' => 'decimal:2',
         'recorded_at' => 'datetime'
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    // Provide a convenient `condition` attribute for existing templates
+    public function getConditionAttribute()
+    {
+        return $this->weather_condition ?? ($this->attributes['weather_condition'] ?? null);
+    }
 }

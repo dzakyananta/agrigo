@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -177,12 +178,10 @@ class _CommodityDetailPageState extends State<CommodityDetailPage> {
 
     // Use all transactions without month filtering
     for (var transaction in transactions) {
-      final commodity =
-          transaction['commodity'] as String? ??
+      final commodity = transaction['commodity'] as String? ??
           transaction['komoditas'] as String? ??
           'Lainnya';
-      final amount =
-          (transaction['amount'] as num?)?.toDouble() ??
+      final amount = (transaction['amount'] as num?)?.toDouble() ??
           double.tryParse(transaction['totalHarga']?.toString() ?? '0') ??
           0.0;
       final type = transaction['type'] as String;
@@ -245,7 +244,7 @@ class _CommodityDetailPageState extends State<CommodityDetailPage> {
   Color _getCommodityColor(String commodity) {
     switch (commodity.toLowerCase()) {
       case 'padi':
-        return Colors.green;
+        return AppColors.primary;
       case 'jagung':
         return Colors.orange;
       case 'cabai':
@@ -262,10 +261,10 @@ class _CommodityDetailPageState extends State<CommodityDetailPage> {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: Colors.green.shade100,
+            color: AppColors.primary.withOpacity(0.08),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(Icons.grass, color: Colors.green, size: 20),
+          child: Icon(Icons.grass, color: AppColors.primary, size: 20),
         );
       case 'jagung':
         return Container(
@@ -339,16 +338,15 @@ class _CommodityDetailPageState extends State<CommodityDetailPage> {
                     itemCount: _getAllSortedTransactions().length,
                     itemBuilder: (context, index) {
                       final transaction = _getAllSortedTransactions()[index];
-                      final commodity =
-                          transaction['commodity'] as String? ??
+                      final commodity = transaction['commodity'] as String? ??
                           transaction['komoditas'] as String? ??
                           'Lainnya';
                       final amount =
                           (transaction['amount'] as num?)?.toDouble() ??
-                          double.tryParse(
-                            transaction['totalHarga']?.toString() ?? '0',
-                          ) ??
-                          0.0;
+                              double.tryParse(
+                                transaction['totalHarga']?.toString() ?? '0',
+                              ) ??
+                              0.0;
                       final type = transaction['type'] as String;
                       final isIncome = type == 'income';
                       final date = DateTime.fromMillisecondsSinceEpoch(
@@ -429,7 +427,8 @@ class _CommodityDetailPageState extends State<CommodityDetailPage> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: isIncome ? Colors.green : Colors.red,
+                                  color:
+                                      isIncome ? AppColors.primary : Colors.red,
                                 ),
                               ),
                             ],

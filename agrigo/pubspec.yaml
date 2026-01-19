@@ -4,7 +4,7 @@ name: agrigo
 description: "Aplikasi Manajemen Pertanian"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none'
+publish_to: "none"
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -21,7 +21,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: ">=3.0.0 <4.0.0"
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -35,32 +35,39 @@ dependencies:
 
   # Firebase - DOWNGRADE MORE to avoid Pigeon bug
   firebase_core: ^2.24.2
-  firebase_auth: ^4.6.3  # DOWNGRADE from 4.14.0
-  cloud_firestore: ^4.9.1  # Compatible with firebase_auth 4.6.3
+  firebase_auth: ^4.6.3 # DOWNGRADE from 4.14.0
+  cloud_firestore: ^4.9.1 # Compatible with firebase_auth 4.6.3
   firebase_messaging: ^14.6.5
   firebase_storage: ^11.2.6
-  
+
   # Authentication
   google_sign_in: ^6.1.6
-  flutter_facebook_auth: ^6.1.1
-  
+  flutter_facebook_auth: ^6.0.4
+  shared_preferences: ^2.2.2
+
+dependency_overrides:
+  # Note: removed local path override for flutter_facebook_auth which caused
+  # "No pubspec.yaml found" errors when the local package folder was absent.
+
   # Notifications
-  flutter_local_notifications: ^17.2.2  
-  
+  flutter_local_notifications: ^17.2.2
+
   # Image & Media
   image_picker: ^1.0.7
-  
+
   # UI & State Management
   cupertino_icons: ^1.0.6
-  
+
   # Location Services
   geolocator: ^10.1.0
   geocoding: ^2.1.1
-  
+
   # HTTP & Data
   http: ^1.1.2
-  shared_preferences: ^2.2.2
-  
+  pdf: ^3.10.1
+  excel: ^2.0.2
+  path_provider: ^2.0.15
+
   # Date & Time
   intl: ^0.18.1
 
@@ -71,6 +78,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  
+
   assets:
     - assets/logo.png

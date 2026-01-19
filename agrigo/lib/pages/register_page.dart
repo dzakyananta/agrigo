@@ -12,7 +12,7 @@ class RegisterTopWavePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     Paint paint = Paint()
-      ..color = const Color(0xFF3AA02F)
+      ..color = const Color(0xFF3CB043)
       ..style = PaintingStyle.fill;
 
     Path path = Path();
@@ -50,7 +50,7 @@ class RegisterBottomWavePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     Paint paint = Paint()
-      ..color = const Color(0xFF2E8B25)
+      ..color = const Color(0xFF3CB043)
       ..style = PaintingStyle.fill;
 
     Path path = Path();
@@ -127,7 +127,7 @@ class _RegisterPageState extends State<RegisterPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Lokasi berhasil dideteksi: $locationName'),
-          backgroundColor: Colors.green,
+          backgroundColor: const Color(0xFF3CB043),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -202,7 +202,7 @@ class _RegisterPageState extends State<RegisterPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('✅ Registrasi berhasil! Silakan login.'),
-              backgroundColor: Color(0xFF2E8B25),
+              backgroundColor: Color(0xFF3CB043),
               duration: Duration(seconds: 2),
             ),
           );
@@ -341,7 +341,7 @@ class _RegisterPageState extends State<RegisterPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('✅ Pendaftaran Google berhasil! Selamat datang $userName'),
-            backgroundColor: const Color(0xFF2E8B25),
+            backgroundColor: const Color(0xFF3CB043),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -450,7 +450,7 @@ class _RegisterPageState extends State<RegisterPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('✅ Pendaftaran Facebook berhasil! Selamat datang $userName'),
-            backgroundColor: const Color(0xFF2E8B25),
+            backgroundColor: const Color(0xFF3CB043),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -688,7 +688,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             suffixIcon: _isGettingLocation
                                 ? const CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2E8B25)),
+                                    valueColor: AlwaysStoppedAnimation<Color>(const Color(0xFF3CB043)),
                                   )
                                 : IconButton(
                                     icon: const Icon(Icons.my_location),
@@ -711,7 +711,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           child: ElevatedButton(
                             onPressed: _isLoading ? null : _handleRegister,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2E8B25),
+                              backgroundColor: const Color(0xFF3CB043),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),

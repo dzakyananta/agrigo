@@ -271,6 +271,13 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('admin.weather.*') ? 'active' : '' }}" 
+                       href="{{ route('admin.weather.index') }}">
+                        <i class="fas fa-cloud-sun"></i>
+                        Cuaca
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" 
                        href="{{ route('admin.reports.index') }}">
                         <i class="fas fa-file-alt"></i>
@@ -278,8 +285,8 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}" 
-                       href="#">
+                    <a class="nav-link {{ request()->routeIs('settings.*') ? 'active' : '' }}" 
+                       href="{{ route('settings.index') }}">
                         <i class="fas fa-cog"></i>
                         Pengaturan
                     </a>

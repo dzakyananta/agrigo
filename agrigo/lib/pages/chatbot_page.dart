@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'dart:io';
-import '../services/gemini_chat_service.dart';
+import '../services/chat_session.dart';
+import '../services/user_data_store.dart';
+import '../services/firebase_service.dart';
 import 'package:image_picker/image_picker.dart';
 
 class ChatMessage {
@@ -27,13 +29,15 @@ class ChatbotPage extends StatefulWidget {
 
 class _ChatbotPageState extends State<ChatbotPage>
     with TickerProviderStateMixin {
-  final List<ChatMessage> _messages = [];
+  late List<ChatMessage> _messages;
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   late AnimationController _typingAnimationController;
   bool _isTyping = false;
   final ImagePicker _picker = ImagePicker();
   File? _selectedImage;
+  // selected quick-action chips
+  final Set<String> _selectedChips = {};
 
   // Database komprehensif harga pasar terkini November 2025
   final Map<String, Map<String, dynamic>> _marketPrices = {
@@ -1531,6 +1535,105 @@ class _ChatbotPageState extends State<ChatbotPage>
       'efficiency_tips':
           'Fokus pada pupuk K untuk pembentukan umbi, hindari N berlebihan yang membuat daun rimbun tapi umbi kecil',
     },
+    'kentang': {
+      'fertilizer_program': {
+        'basic': 'NPK 15:15:15 400 kg/ha + Urea 200 kg/ha + KCl 150 kg/ha',
+        'schedule': {
+          '0_HST': 'Pupuk kandang 10 ton/ha + SP36 150 kg/ha (dasar)',
+          '21_HST': 'Urea 100 kg/ha + NPK 150 kg/ha (vegetatif)',
+          '42_HST': 'Urea 100 kg/ha + KCl 100 kg/ha (pembentukan umbi)',
+        },
+        'organic_alternative': 'Kompos 15 ton/ha + Pupuk kandang 8 ton/ha',
+        'micro_nutrients': 'B 2 kg/ha, Ca 200 kg/ha, Mg 30 kg/ha',
+        'soil_pH': '5.5-6.5 optimal',
+      },
+      'yield_target': '10-25 ton/ha umbi segar',
+      'efficiency_tips': 'Tanam bibit sehat, hindari genangan, tambahkan Ca untuk kualitas umbi',
+    },
+    'kacang tanah': {
+      'fertilizer_program': {
+        'basic': 'SP36 150 kg/ha + KCl 100 kg/ha + Pupuk kandang 5 ton/ha',
+        'schedule': {
+          '0_HST': 'SP36 150 kg/ha + Pupuk kandang 3-5 ton/ha (dasar)',
+          '30_HST': 'Urea 50 kg/ha + KCl 50 kg/ha (pembungaan)',
+        },
+        'organic_alternative': 'Kompos 5 ton/ha + inokulan Rhizobium pada benih',
+        'micro_nutrients': 'Zn 10 kg/ha, B 1-2 kg/ha',
+        'soil_pH': '6.0-6.8 optimal',
+      },
+      'yield_target': '2-3 ton/ha biji kering',
+      'efficiency_tips': 'Pastikan lubang tanam gembur dan kering; tambahkan inokulan untuk fiksasi N',
+    },
+    'kacang hijau': {
+      'fertilizer_program': {
+        'basic': 'SP36 100 kg/ha + Pupuk kandang 3 ton/ha',
+        'schedule': {
+          '0_HST': 'SP36 100 kg/ha + Pupuk kandang 3 ton/ha (dasar)',
+          '21_HST': 'Urea 25-50 kg/ha (susulan ringan)',
+        },
+        'organic_alternative': 'Kompos 3 ton/ha + inokulan Rhizobium',
+        'micro_nutrients': 'Mo 1-2 kg/ha, Zn 5-10 kg/ha',
+        'soil_pH': '6.0-7.0 optimal',
+      },
+      'yield_target': '1.5-2.5 ton/ha biji kering',
+      'efficiency_tips': 'Gunakan varietas cepat panen dan kontrol gulma dini',
+    },
+    'ubi jalar': {
+      'fertilizer_program': {
+        'basic': 'NPK 15:15:15 250-350 kg/ha + Pupuk kandang 10 ton/ha',
+        'schedule': {
+          '0_HST': 'Pupuk kandang 8-10 ton/ha + SP36 100 kg/ha (dasar)',
+          '30_HST': 'Urea 50-75 kg/ha (susulan)'
+        },
+        'organic_alternative': 'Kompos 8-10 ton/ha',
+        'micro_nutrients': 'Zn 10 kg/ha, B 1-2 kg/ha',
+        'soil_pH': '5.5-6.5 optimal',
+      },
+      'yield_target': '8-20 ton/ha umbi segar',
+      'efficiency_tips': 'Jaga kelembaban tanah, hindari overwatering untuk mencegah busuk akar',
+    },
+    'ubi kayu': {
+      'fertilizer_program': {
+        'basic': 'NPK 15:15:15 200-300 kg/ha + Pupuk kandang 10-15 ton/ha',
+        'schedule': {
+          '0_HST': 'Pupuk kandang 10 ton/ha + SP36 100 kg/ha (dasar)',
+          '60_HST': 'Urea 50 kg/ha + KCl 50 kg/ha (pemeliharaan)'
+        },
+        'organic_alternative': 'Pupuk kandang 12-15 ton/ha',
+        'micro_nutrients': 'Zn 10 kg/ha, B 2 kg/ha',
+        'soil_pH': '5.5-6.5 optimal',
+      },
+      'yield_target': '20-40 ton/ha umbi segar',
+      'efficiency_tips': 'Perbaiki drainase lahan dan rotasi dengan tanaman non-kontributor penyakit',
+    },
+    'terong': {
+      'fertilizer_program': {
+        'basic': 'NPK 16:16:16 400 kg/ha + Urea 150 kg/ha + KCl 100 kg/ha',
+        'schedule': {
+          '0_HST': 'Kompos 10 ton/ha + SP36 150 kg/ha (dasar)',
+          '30_HST': 'Urea 75 kg/ha + NPK 150 kg/ha (vegetatif)'
+        },
+        'organic_alternative': 'Kompos 10 ton/ha + pupuk kandang',
+        'micro_nutrients': 'Ca 100-200 kg/ha, B 1-2 kg/ha',
+        'soil_pH': '6.0-6.8 optimal',
+      },
+      'yield_target': '10-20 ton/ha buah segar',
+      'efficiency_tips': 'Gunakan mulsa dan naungan untuk mengurangi penyakit daun',
+    },
+    'kacang panjang': {
+      'fertilizer_program': {
+        'basic': 'SP36 100 kg/ha + Pupuk kandang 5 ton/ha + NPK minimal',
+        'schedule': {
+          '0_HST': 'SP36 100 kg/ha + Pupuk kandang 5 ton/ha (dasar)',
+          '21_HST': 'Urea 50 kg/ha (susulan)'
+        },
+        'organic_alternative': 'Kompos 5 ton/ha + inokulan Rhizobium jika tersedia',
+        'micro_nutrients': 'Zn 5-10 kg/ha',
+        'soil_pH': '6.0-7.0 optimal',
+      },
+      'yield_target': '4-8 ton/ha polong segar',
+      'efficiency_tips': 'Sistem ajir/bambu untuk dukungan tanaman dan panen lebih mudah',
+    },
   };
 
   // Database pupuk dan nutrisi umum
@@ -1599,14 +1702,20 @@ class _ChatbotPageState extends State<ChatbotPage>
       vsync: this,
     )..repeat();
 
-    // Pesan selamat datang
-    _addMessage(
-      ChatMessage(
+    // Bind to shared in-memory chat session so messages persist across pages
+    _messages = ChatSession.instance.messages
+        .map((m) => ChatMessage(text: m.text, isUser: m.isUser, timestamp: m.timestamp, imageFile: m.imageFile))
+        .toList();
+
+    // If session is empty, add the welcome message. Otherwise keep existing messages.
+    if (_messages.isEmpty) {
+      final welcome = ChatMessage(
         text:
             '🌾 Selamat datang di AgriGo AI Assistant!\n\nSaya siap membantu Anda dengan informasi harga pasar, tips budidaya, pengendalian hama penyakit, rekomendasi pupuk, dan konsultasi pertanian lainnya.\n\nApa yang ingin Anda konsultasikan hari ini? 😊',
         isUser: false,
-      ),
-    );
+      );
+      _addMessage(welcome);
+    }
   }
 
   @override
@@ -1620,6 +1729,19 @@ class _ChatbotPageState extends State<ChatbotPage>
   void _addMessage(ChatMessage message) {
     setState(() {
       _messages.add(message);
+      // Also store a lightweight copy in the session so it persists across pages
+      ChatSession.instance.messages.add(ChatMessageLite(
+        text: message.text,
+        isUser: message.isUser,
+        timestamp: message.timestamp,
+        imageFile: message.imageFile,
+      ));
+      // Persist per-account chat messages (fire-and-forget)
+      final uid = FirebaseService.userId;
+      if (uid != null && uid.isNotEmpty) {
+        UserDataStore.instance
+            .saveChatMessages(uid, ChatSession.instance.messages);
+      }
     });
     _scrollToBottom();
   }
@@ -2211,34 +2333,71 @@ class _ChatbotPageState extends State<ChatbotPage>
     try {
       String response;
 
-      // If image is attached, use vision API
+      // Local handling for simple greetings to make bot more responsive
+      if (_isGreeting(message)) {
+        response = _greetingResponse(message);
+        setState(() => _isTyping = false);
+        _addMessage(ChatMessage(text: response, isUser: false));
+        return;
+      }
+
+      // If image is attached, perform local/offline image guidance
       if (imageToSend != null) {
-        response = await GeminiChatService.sendMessageWithImage(
-          message.isEmpty
-              ? 'Analisis tanaman ini, apakah ada masalah? Berikan rekomendasi perawatan.'
-              : message,
-          imageToSend,
-        );
+        // Simulate short processing delay for UX
+        await Future.delayed(const Duration(milliseconds: 800));
+        response =
+            '📸 Gambar diterima. Analisis gambar offline terbatas. Untuk hasil lebih akurat, sebutkan nama tanaman atau deskripsikan gejala (mis. daun menguning, bercak coklat, lubang).\n\nSaran umum: periksa kelembaban tanah, tanda bekas hama, dan kondisi akar. Jika mau, kirim foto tambahan atau ketik nama tanaman untuk panduan spesifik.';
       } else {
-        // Text only
-        response = await GeminiChatService.sendMessage(message);
+        // Text only: use fully local knowledge base
+        await Future.delayed(const Duration(milliseconds: 500));
+        response = _generateAIResponse(message);
       }
 
       setState(() {
         _isTyping = false;
       });
 
-      // Add AI response
+      // Add local AI response
       _addMessage(ChatMessage(text: response, isUser: false));
     } catch (e) {
       setState(() {
         _isTyping = false;
       });
 
-      // Fallback to local response on error
+      // On unexpected errors, still use local generator
       String response = _generateAIResponse(message);
       _addMessage(ChatMessage(text: response, isUser: false));
     }
+  }
+
+  bool _isGreeting(String text) {
+    final s = text.toLowerCase();
+    final patterns = [
+      r'\bhai\b',
+      r'\bhallo\b',
+      r'\bhalo\b',
+      r'\bhi\b',
+      r'selamat pagi',
+      r'selamat siang',
+      r'selamat sore',
+      r'selamat malam',
+      r'apa kabar',
+    ];
+
+    for (final p in patterns) {
+      if (RegExp(p, caseSensitive: false).hasMatch(s)) return true;
+    }
+    return false;
+  }
+
+  String _greetingResponse(String message) {
+    final s = message.toLowerCase();
+    if (RegExp(r'apa kabar', caseSensitive: false).hasMatch(s)) {
+      return 'Baik, terima kasih! Saya AgriBot, asisten pertanian Anda. Ada yang bisa saya bantu hari ini?';
+    }
+
+    // generic greeting
+    return 'Halo! Saya AgriBot, asisten pertanian virtual. Bagaimana saya bisa membantu Anda hari ini?';
   }
 
   Future<void> _pickImage() async {
@@ -2288,58 +2447,47 @@ class _ChatbotPageState extends State<ChatbotPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: Row(
           children: [
             Container(
-              padding: EdgeInsets.all(6),
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
-                borderRadius: BorderRadius.circular(8),
+                color: const Color(0xFF3CB043),
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withOpacity(0.15),
                     blurRadius: 4,
-                    offset: Offset(0, 2),
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: Icon(
-                Icons.smart_toy_outlined,
-                color: Colors.green.shade700,
-                size: 24,
-              ),
+              child: const Icon(Icons.smart_toy, color: Colors.white),
             ),
-            SizedBox(width: 12),
+            const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'AgriGo AI Assistant',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-                Text(
-                  'Konsultan Pertanian Digital 🌾',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
+              children: const [
+                Text('AgriBot', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                SizedBox(height: 2),
+                Text('Online', style: TextStyle(color: Color(0xFFB9F2C6), fontSize: 12)),
               ],
             ),
           ],
         ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
         flexibleSpace: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF4CAF50)],
+              colors: [Color(0xFF3CB043), Color(0xFF3CB043)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -2347,149 +2495,98 @@ class _ChatbotPageState extends State<ChatbotPage>
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.info_outline),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Row(
-                    children: [
-                      Icon(Icons.agriculture, color: Colors.green),
-                      SizedBox(width: 8),
-                      Text('Tentang AgriGo AI'),
-                    ],
-                  ),
-                  content: const Text(
-                    'AgriGo AI Assistant adalah chatbot cerdas yang membantu petani dengan:\n\n'
-                    '• Informasi harga pasar terkini\n'
-                    '• Panduan budidaya lengkap\n'
-                    '• Solusi hama dan penyakit\n'
-                    '• Rekomendasi pupuk optimal\n'
-                    '• Strategi menghadapi cuaca\n'
-                    '• Teknologi pertanian modern\n'
-                    '• Analisis usahatani\n\n'
-                    'Dikembangkan dengan AI dan database pertanian terlengkap untuk kemajuan petani Indonesia.',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Tutup'),
-                    ),
-                  ],
-                ),
-              );
-            },
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            onPressed: () {},
           ),
         ],
       ),
       body: Column(
         children: [
-          // Chat messages
+          // Chat area: render messages and typing indicator
           Expanded(
             child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.green.shade50, Colors.white],
-                ),
-              ),
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                itemCount: _messages.length + (_isTyping ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index == _messages.length && _isTyping) {
-                    return _buildTypingIndicator();
-                  }
-
-                  final message = _messages[index];
-                  return _buildMessageBubble(message);
-                },
-              ),
+              color: Colors.white,
+              child: _messages.isEmpty
+                  ? const SizedBox.shrink()
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      itemCount: _messages.length + (_isTyping ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (_isTyping && index == _messages.length) {
+                          return _buildTypingIndicator();
+                        }
+                        final msg = _messages[index];
+                        return _buildMessageBubble(msg);
+                      },
+                    ),
             ),
           ),
 
-          // Input area
+          // Input bar
           Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  offset: const Offset(0, -2),
-                  blurRadius: 4,
-                  color: Colors.black.withOpacity(0.1),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(25),
-                        border: Border.all(
-                          color: Colors.green.withOpacity(0.3),
-                          width: 1.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.green.withOpacity(0.1),
-                            blurRadius: 8,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            color: Colors.white,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(
+                        color: const Color(0xFF3CB043).withOpacity(0.3),
+                        width: 1.5,
                       ),
-                      child: Column(
-                        children: [
-                          // Image preview if selected
-                          if (_selectedImage != null)
-                            Container(
-                              margin: EdgeInsets.all(8),
-                              child: Stack(
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: Image.file(
-                                      _selectedImage!,
-                                      width: 100,
-                                      height: 100,
-                                      fit: BoxFit.cover,
-                                    ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF3CB043).withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        if (_selectedImage != null)
+                          Container(
+                            margin: const EdgeInsets.all(8),
+                            child: Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.file(
+                                    _selectedImage!,
+                                    width: 80,
+                                    height: 80,
+                                    fit: BoxFit.cover,
                                   ),
-                                  Positioned(
-                                    top: 4,
-                                    right: 4,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          _selectedImage = null;
-                                        });
-                                      },
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: Colors.red,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        padding: EdgeInsets.all(4),
-                                        child: Icon(
-                                          Icons.close,
-                                          size: 16,
-                                          color: Colors.white,
-                                        ),
+                                ),
+                                Positioned(
+                                  top: 4,
+                                  right: 4,
+                                  child: GestureDetector(
+                                    onTap: () => setState(() => _selectedImage = null),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      padding: const EdgeInsets.all(4),
+                                      child: const Icon(
+                                        Icons.close,
+                                        size: 16,
+                                        color: Colors.white,
                                       ),
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          TextField(
+                          ),
+
+                        Expanded(
+                          child: TextField(
                             controller: _messageController,
                             decoration: InputDecoration(
                               hintText: _selectedImage != null
@@ -2500,118 +2597,117 @@ class _ChatbotPageState extends State<ChatbotPage>
                                 fontSize: 15,
                               ),
                               border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
+                              contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 20,
                                 vertical: 14,
                               ),
                               prefixIcon: Padding(
-                                padding: EdgeInsets.only(left: 12, right: 8),
+                                padding: const EdgeInsets.only(left: 12, right: 8),
                                 child: Icon(
                                   Icons.chat_bubble_outline,
-                                  color: Colors.green.shade400,
+                                  color: const Color(0xFF3CB043),
                                   size: 20,
                                 ),
                               ),
-                              prefixIconConstraints: BoxConstraints(
+                              prefixIconConstraints: const BoxConstraints(
                                 minWidth: 40,
                                 minHeight: 20,
                               ),
                             ),
                             maxLines: null,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 15,
                               color: Colors.black87,
                             ),
                             onSubmitted: (_) => _sendMessage(),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Camera button
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(25),
-                      border: Border.all(
-                        color: Colors.blue.withOpacity(0.3),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.camera_alt,
-                        color: Colors.blue,
-                        size: 22,
-                      ),
-                      onPressed: () {
-                        showModalBottomSheet(
-                          context: context,
-                          builder: (context) => Container(
-                            padding: EdgeInsets.all(20),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ListTile(
-                                  leading: Icon(
-                                    Icons.camera_alt,
-                                    color: Colors.blue,
-                                  ),
-                                  title: Text('Ambil Foto'),
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    _takePhoto();
-                                  },
-                                ),
-                                ListTile(
-                                  leading: Icon(
-                                    Icons.photo_library,
-                                    color: Colors.green,
-                                  ),
-                                  title: Text('Pilih dari Galeri'),
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    _pickImage();
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                      tooltip: 'Upload foto tanaman',
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Color(0xFF4CAF50), Color(0xFF66BB6A)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(25),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.green.withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
                         ),
                       ],
                     ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.send_rounded,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                      onPressed: _sendMessage,
-                      splashRadius: 25,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(25),
+                    border: Border.all(
+                      color: Colors.blue.withOpacity(0.3),
+                      width: 1.5,
                     ),
                   ),
-                ],
-              ),
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.camera_alt,
+                      color: Colors.blue,
+                      size: 22,
+                    ),
+                    onPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        builder: (context) => Container(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ListTile(
+                                leading: const Icon(
+                                  Icons.camera_alt,
+                                  color: Colors.blue,
+                                ),
+                                title: const Text('Ambil Foto'),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  _takePhoto();
+                                },
+                              ),
+                              ListTile(
+                                leading: const Icon(
+                                  Icons.photo_library,
+                                  color: Color(0xFF3CB043),
+                                ),
+                                title: const Text('Pilih dari Galeri'),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  _pickImage();
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                    tooltip: 'Upload foto tanaman',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF3CB043), Color(0xFF3CB043)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(25),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF3CB043).withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.send_rounded,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                    onPressed: _sendMessage,
+                    splashRadius: 25,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -2635,16 +2731,12 @@ class _ChatbotPageState extends State<ChatbotPage>
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color: const Color(0xFF3CB043),
                 borderRadius: BorderRadius.circular(18),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.green.withOpacity(0.3),
-                    blurRadius: 6,
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 4,
                     offset: Offset(0, 2),
                   ),
                 ],
@@ -2662,31 +2754,22 @@ class _ChatbotPageState extends State<ChatbotPage>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
-                color: isUser ? null : Colors.white,
-                gradient: isUser
-                    ? LinearGradient(
-                        colors: [Color(0xFF4CAF50), Color(0xFF66BB6A)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      )
-                    : null,
+                color: isUser ? const Color(0xFF3CB043) : Colors.white,
                 borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(isUser ? 20 : 4),
+                  topLeft: Radius.circular(isUser ? 20 : 8),
                   topRight: Radius.circular(20),
                   bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(isUser ? 4 : 20),
+                  bottomRight: Radius.circular(isUser ? 8 : 20),
                 ),
                 boxShadow: [
                   BoxShadow(
                     offset: const Offset(0, 2),
-                    blurRadius: 8,
-                    color: isUser
-                        ? Colors.green.withOpacity(0.2)
-                        : Colors.black.withOpacity(0.1),
+                    blurRadius: 6,
+                    color: Colors.black.withOpacity(isUser ? 0.06 : 0.08),
                   ),
                 ],
                 border: !isUser
-                    ? Border.all(color: Colors.green.withOpacity(0.1), width: 1)
+                    ? Border.all(color: const Color(0xFF3CB043).withOpacity(0.12), width: 1.2)
                     : null,
               ),
               child: Column(
@@ -2710,7 +2793,7 @@ class _ChatbotPageState extends State<ChatbotPage>
                     style: TextStyle(
                       color: isUser ? Colors.white : Colors.black87,
                       fontSize: 15,
-                      height: 1.5,
+                      height: 1.4,
                       fontWeight: isUser ? FontWeight.w500 : FontWeight.w400,
                     ),
                   ),
@@ -2744,6 +2827,58 @@ class _ChatbotPageState extends State<ChatbotPage>
     );
   }
 
+  Widget _buildActionChip(String label) {
+    final selected = _selectedChips.contains(label);
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (selected) {
+            _selectedChips.remove(label);
+          } else {
+            _selectedChips.add(label);
+            // also send as user message
+            _messages.add(ChatMessage(text: label, isUser: true));
+          }
+        });
+
+        // scroll to bottom
+        Future.delayed(const Duration(milliseconds: 120), () {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent + 140,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF3CB043) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFF3CB043)),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF3CB043).withOpacity(0.16),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [],
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : const Color(0xFF3CB043),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTypingIndicator() {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
@@ -2754,16 +2889,16 @@ class _ChatbotPageState extends State<ChatbotPage>
           Container(
             width: 36,
             height: 36,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
+              decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF3CB043), Color(0xFF3CB043)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.green.withOpacity(0.3),
+                  color: const Color(0xFF3CB043).withOpacity(0.3),
                   blurRadius: 6,
                   offset: Offset(0, 2),
                 ),
@@ -2804,7 +2939,7 @@ class _ChatbotPageState extends State<ChatbotPage>
                   ),
                 ],
                 border: Border.all(
-                  color: Colors.green.withOpacity(0.1),
+                  color: const Color(0xFF3CB043).withOpacity(0.1),
                   width: 1,
                 ),
               ),
@@ -2846,7 +2981,7 @@ class _ChatbotPageState extends State<ChatbotPage>
                                 width: 8,
                                 height: 8,
                                 decoration: BoxDecoration(
-                                  color: Colors.green,
+                                  color: const Color(0xFF3CB043),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                               ),

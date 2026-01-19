@@ -99,12 +99,12 @@ class _WeatherPageState extends State<WeatherPage> {
                   Container(
                     padding: EdgeInsets.all(15),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
+                      color: Color(0xFF3CB043).withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.location_on,
-                      color: Colors.green,
+                      color: Color(0xFF3CB043),
                       size: 40,
                     ),
                   ),
@@ -168,7 +168,7 @@ class _WeatherPageState extends State<WeatherPage> {
                     Navigator.of(context).pop(true);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+                    backgroundColor: Color(0xFF3CB043),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -1209,14 +1209,14 @@ class _WeatherPageState extends State<WeatherPage> {
                         ),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [Color(0xFF81C784), Color(0xFF4CAF50)],
+                            colors: [Color(0xFF3CB043), Color(0xFF3CB043)],
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                           ),
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.green.withOpacity(0.25),
+                              color: Color(0xFF3CB043).withOpacity(0.25),
                               blurRadius: 12,
                               offset: Offset(0, 6),
                             ),
@@ -1469,7 +1469,7 @@ class _WeatherPageState extends State<WeatherPage> {
                                       children: [
                                         Icon(
                                           Icons.schedule,
-                                          color: Colors.green,
+                                          color: Color(0xFF3CB043),
                                           size: 20,
                                         ),
                                         SizedBox(width: 8),
@@ -1508,8 +1508,8 @@ class _WeatherPageState extends State<WeatherPage> {
                                               gradient: isNow
                                                   ? LinearGradient(
                                                       colors: [
-                                                        Color(0xFF4CAF50),
-                                                        Color(0xFF66BB6A),
+                                                        Color(0xFF3CB043),
+                                                        Color(0xFF3CB043),
                                                       ],
                                                       begin:
                                                           Alignment.topCenter,
@@ -1524,7 +1524,7 @@ class _WeatherPageState extends State<WeatherPage> {
                                                   BorderRadius.circular(16),
                                               border: isNow
                                                   ? Border.all(
-                                                      color: Colors.green,
+                                                      color: Color(0xFF3CB043),
                                                       width: 2,
                                                     )
                                                   : null,
@@ -1610,7 +1610,8 @@ class _WeatherPageState extends State<WeatherPage> {
                                           vertical: 4,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Colors.green.withOpacity(0.1),
+                                          color: Color(0xFF3CB043)
+                                              .withOpacity(0.1),
                                           borderRadius: BorderRadius.circular(
                                             12,
                                           ),
@@ -1621,14 +1622,14 @@ class _WeatherPageState extends State<WeatherPage> {
                                             Icon(
                                               Icons.swipe_left,
                                               size: 14,
-                                              color: Colors.green,
+                                              color: Color(0xFF3CB043),
                                             ),
                                             SizedBox(width: 4),
                                             Text(
                                               'Geser untuk melihat lebih banyak',
                                               style: TextStyle(
                                                 fontSize: 11,
-                                                color: Colors.green[700],
+                                                color: Color(0xFF3CB043),
                                               ),
                                             ),
                                           ],
